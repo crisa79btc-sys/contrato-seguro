@@ -17,6 +17,7 @@ export async function GET(
   const response: Record<string, unknown> = {
     status: contract.status,
     contractType: contract.contract_type,
+    filename: contract.original_filename,
   };
 
   if (contract.status === 'error') {

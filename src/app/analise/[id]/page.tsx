@@ -6,11 +6,14 @@ import Footer from '@/components/ui/Footer';
 import RiskScore from '@/components/analysis/RiskScore';
 import IssueCard from '@/components/analysis/IssueCard';
 import ProcessingStatus from '@/components/analysis/ProcessingStatus';
+import ShareButtons from '@/components/analysis/ShareButtons';
 import { DISCLAIMER_LEGAL } from '@/config/constants';
+import { addToHistory } from '@/lib/local-history';
 
 type AnalysisData = {
   status: string;
   contractType: string | null;
+  filename: string | null;
   error?: string;
   result?: {
     global_score: { value: number; interpretation: string; formula_detail: string };
@@ -62,6 +65,19 @@ export default function AnalisePage({ params }: { params: { id: string } }) {
       clearTimeout(timeout);
     };
   }, [fetchStatus]);
+
+  // Salvar no histórico local quando análise completar
+  useEffect(() => {
+    if (data?.status === 'analyzed' && data.result) {
+      addToHistory({
+        contractId: params.id,
+        filename: data.filename || 'contrato.pdf',
+        contractType: formatContractType(data.contractType || 'outro'),
+        score: data.result.global_score.value,
+        date: new Date().toISOString(),
+      });
+    }
+  }, [data?.status, data?.result, data?.contractType, params.id]);
 
   const isProcessing =
     data &&
@@ -123,6 +139,12 @@ export default function AnalisePage({ params }: { params: { id: string } }) {
                 interpretation={data.result.global_score.interpretation}
               />
 
+              {/* Compartilhar */}
+              <ShareButtons
+                score={data.result.global_score.value}
+                contractType={formatContractType(data.contractType || 'outro')}
+              />
+
               {/* Resumo */}
               <div className="rounded-xl bg-gray-50 p-4">
                 <h2 className="text-sm font-semibold text-gray-900">Resumo</h2>
@@ -158,6 +180,7 @@ export default function AnalisePage({ params }: { params: { id: string } }) {
                     summary={issue.original_text_summary}
                     riskLevel={issue.risk_level}
                     explanation={issue.explanation}
+                    delay={200 + i * 200}
                   />
                 ))}
 
@@ -178,6 +201,20 @@ export default function AnalisePage({ params }: { params: { id: string } }) {
                     )}
                   </>
                 )}
+              </div>
+
+              {/* Download do relatório */}
+              <div className="flex justify-center">
+                <a
+                  href={`/api/contract/${params.id}/report`}
+                  download
+                  className="flex items-center gap-2 rounded-xl border border-brand-200 bg-brand-50 px-6 py-3 text-sm font-semibold text-brand-700 shadow-sm transition-all hover:bg-brand-100 active:scale-95"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                  </svg>
+                  Baixar relatório em PDF
+                </a>
               </div>
 
               {/* CTA futuro (desabilitado na beta) */}

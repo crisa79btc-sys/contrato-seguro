@@ -1,9 +1,14 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+
 type IssueCardProps = {
   clauseId: string;
   summary: string;
   riskLevel: string;
   explanation: string;
   locked?: boolean;
+  delay?: number;
 };
 
 const riskConfig: Record<string, { color: string; bg: string; label: string }> = {
@@ -14,11 +19,21 @@ const riskConfig: Record<string, { color: string; bg: string; label: string }> =
   ok: { color: 'text-green-700', bg: 'bg-green-100', label: 'OK' },
 };
 
-export default function IssueCard({ clauseId, summary, riskLevel, explanation, locked = false }: IssueCardProps) {
+export default function IssueCard({ clauseId, summary, riskLevel, explanation, locked = false, delay = 0 }: IssueCardProps) {
   const config = riskConfig[riskLevel] || riskConfig.medium;
+  const [visible, setVisible] = useState(delay === 0);
+
+  useEffect(() => {
+    if (delay > 0) {
+      const timer = setTimeout(() => setVisible(true), delay);
+      return () => clearTimeout(timer);
+    }
+  }, [delay]);
 
   return (
-    <div className={`rounded-xl border border-gray-200 bg-white p-4 shadow-sm ${locked ? 'relative overflow-hidden' : ''}`}>
+    <div
+      className={`rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-all duration-500 ${locked ? 'relative overflow-hidden' : ''} ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'}`}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1">
           <div className="flex items-center gap-2">

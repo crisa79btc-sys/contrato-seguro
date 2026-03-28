@@ -1,5 +1,7 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+
 type RiskScoreProps = {
   score: number;
   interpretation: string;
@@ -14,12 +16,35 @@ function getScoreColor(score: number) {
 }
 
 export default function RiskScore({ score, interpretation }: RiskScoreProps) {
+  const [displayScore, setDisplayScore] = useState(0);
+  const [mounted, setMounted] = useState(false);
   const colors = getScoreColor(score);
   const circumference = 2 * Math.PI * 54;
-  const offset = circumference - (score / 100) * circumference;
+  const offset = circumference - (displayScore / 100) * circumference;
+
+  // Animação de contagem do score
+  useEffect(() => {
+    setMounted(true);
+    const duration = 1200;
+    const steps = 40;
+    const increment = score / steps;
+    let current = 0;
+    let step = 0;
+
+    const timer = setInterval(() => {
+      step++;
+      current = Math.min(Math.round(increment * step), score);
+      setDisplayScore(current);
+      if (step >= steps) clearInterval(timer);
+    }, duration / steps);
+
+    return () => clearInterval(timer);
+  }, [score]);
 
   return (
-    <div className={`flex flex-col items-center rounded-2xl ${colors.bg} p-6`}>
+    <div
+      className={`flex flex-col items-center rounded-2xl ${colors.bg} p-6 transition-all duration-500 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+    >
       <div className="relative h-36 w-36">
         <svg className="h-full w-full -rotate-90" viewBox="0 0 120 120">
           <circle cx="60" cy="60" r="54" fill="none" stroke="currentColor" strokeWidth="8" className="text-gray-200" />
@@ -37,7 +62,7 @@ export default function RiskScore({ score, interpretation }: RiskScoreProps) {
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className={`text-3xl font-bold ${colors.text}`}>{score}</span>
+          <span className={`text-3xl font-bold ${colors.text}`}>{displayScore}</span>
           <span className="text-xs text-gray-500">de 100</span>
         </div>
       </div>

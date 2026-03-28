@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Header from '@/components/ui/Header';
 import Footer from '@/components/ui/Footer';
 import FileUpload from '@/components/upload/FileUpload';
+import RecentAnalyses from '@/components/history/RecentAnalyses';
 
 export default function Home() {
   const router = useRouter();
@@ -87,6 +88,9 @@ export default function Home() {
             </div>
           </div>
         </section>
+
+        {/* Histórico Recente */}
+        <RecentAnalyses />
 
         {/* Como Funciona */}
         <section className="bg-gray-50 px-4 py-16">
