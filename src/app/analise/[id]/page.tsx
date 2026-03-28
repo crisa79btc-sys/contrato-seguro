@@ -77,7 +77,7 @@ export default function AnalisePage({ params }: { params: { id: string } }) {
         date: new Date().toISOString(),
       });
     }
-  }, [data?.status, data?.result, data?.contractType, params.id]);
+  }, [data?.status, data?.result, data?.contractType, data?.filename, params.id]);
 
   const isProcessing =
     data &&

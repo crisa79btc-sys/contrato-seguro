@@ -82,18 +82,27 @@ docs/
   prompts/system-negotiation.md     # Prompt de negociação (não implementado)
   api/README.md                     # Documentação das rotas de API
   api/realtime.md                   # Documentação Supabase Realtime
-  types/                            # Cópia de referência dos tipos
   dependencies.md                   # Lista de dependências com justificativa
 ```
 
 ## Fluxo Atual (MVP Beta)
 
 1. Usuário faz upload de PDF na landing page
-2. `POST /api/upload` valida (MIME, magic bytes, tamanho), parseia texto
+2. `POST /api/upload` valida (MIME, magic bytes, tamanho), parseia e limpa texto
 3. Contrato salvo no store em memória, análise disparada em background
-4. Classificação do tipo (Haiku) → Análise gratuita (Haiku, tier free)
+4. Classificação do tipo (Haiku, 15s timeout) → Análise gratuita (Haiku, 120s timeout)
 5. Frontend faz polling em `GET /api/contract/[id]/status` a cada 2s
-6. Resultado exibido: score de risco + top 3 problemas + total de issues
+6. Resultado exibido: score animado + top 3 problemas + total + cards locked
+7. Usuário pode: compartilhar (WhatsApp/link), baixar relatório PDF, ver histórico
+
+## Robustez implementada
+
+- Safe JSON parsing (3 estratégias de fallback para outputs da IA)
+- Validação Zod de todos os outputs da IA
+- Timeout + retry (2x) nas chamadas Claude
+- Error handling granular (classificação pode falhar sem bloquear análise)
+- Limpeza de texto (remove paginação PDF, trunca contratos longos)
+- 29 testes unitários (Vitest)
 
 ## O que falta para completar a Fase 1
 
