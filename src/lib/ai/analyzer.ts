@@ -1,6 +1,6 @@
 import { callClaude } from './client';
 import { AI_MODELS, AI_MAX_TOKENS } from '@/config/constants';
-import type { AIAnalysisOutput } from '@/types';
+import type { AIAnalysisOutput, AnalysisTier } from '@/types';
 
 const SYSTEM_PROMPT = `Voce e um analista juridico especializado em contratos brasileiros. Sua funcao e analisar contratos, identificar problemas e gerar um relatorio estruturado em JSON.
 
@@ -102,8 +102,6 @@ Quando o parametro tier for "free", retorne APENAS:
 }
 Limite top_issues a no maximo 3 itens, priorizando por severidade (critical > high > medium > low).
 </tier_free>`;
-
-export type AnalysisTier = 'free' | 'full';
 
 /**
  * Analisa um contrato com a IA.
