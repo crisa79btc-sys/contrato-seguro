@@ -10,6 +10,12 @@ type FileUploadProps = {
 
 const MAX_SIZE_MB = 10;
 const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
+const ACCEPTED_TYPES = [
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+];
 
 export default function FileUpload({ onFileSelected, isUploading = false, error }: FileUploadProps) {
   const [dragOver, setDragOver] = useState(false);
@@ -18,8 +24,8 @@ export default function FileUpload({ onFileSelected, isUploading = false, error 
   const inputRef = useRef<HTMLInputElement>(null);
 
   const validateFile = useCallback((file: File): string | null => {
-    if (file.type !== 'application/pdf') {
-      return 'Formato não suportado. Envie um arquivo PDF.';
+    if (!ACCEPTED_TYPES.includes(file.type)) {
+      return 'Formato não suportado. Envie PDF, JPG, PNG ou WebP.';
     }
     if (file.size > MAX_SIZE_BYTES) {
       return `Arquivo muito grande. O limite é ${MAX_SIZE_MB}MB.`;
@@ -98,7 +104,7 @@ export default function FileUpload({ onFileSelected, isUploading = false, error 
         <input
           ref={inputRef}
           type="file"
-          accept=".pdf,application/pdf"
+          accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp"
           onChange={handleChange}
           className="hidden"
           aria-hidden="true"
@@ -134,7 +140,7 @@ export default function FileUpload({ onFileSelected, isUploading = false, error 
                 <span className="text-brand-600 font-semibold">Selecione um arquivo</span>
                 <span className="hidden sm:inline"> ou arraste aqui</span>
               </p>
-              <p className="mt-1 text-xs text-gray-500">PDF - até {MAX_SIZE_MB}MB</p>
+              <p className="mt-1 text-xs text-gray-500">PDF, JPG, PNG - até {MAX_SIZE_MB}MB</p>
             </div>
           </div>
         )}

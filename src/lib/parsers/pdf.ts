@@ -1,26 +1,37 @@
 import pdfParse from 'pdf-parse';
+import { extractTextFromPdfImages } from './ocr-vision';
 
 export type ParseResult = {
   text: string;
   pageCount: number;
+  method: 'text' | 'vision';
 };
 
 /**
  * Extrai texto de um buffer PDF.
- * Retorna o texto e número de páginas.
+ * Tenta extração de texto direto primeiro.
+ * Se falhar (PDF escaneado), usa Claude Vision como fallback.
  */
 export async function parsePdf(buffer: Buffer): Promise<ParseResult> {
   const data = await pdfParse(buffer);
-
   const text = data.text?.trim();
-  if (!text || text.length < 50) {
-    throw new Error(
-      'Não foi possível extrair texto deste PDF. Ele pode ser uma imagem escaneada. No momento, analisamos apenas PDFs com texto selecionável.'
-    );
+
+  // Se conseguiu extrair texto suficiente, retorna direto
+  if (text && text.length >= 50) {
+    return {
+      text,
+      pageCount: data.numpages || 1,
+      method: 'text',
+    };
   }
 
+  // Fallback: PDF escaneado — usar Claude Vision
+  console.log('PDF sem texto extraível, usando Claude Vision...');
+  const visionText = await extractTextFromPdfImages(buffer);
+
   return {
-    text,
+    text: visionText,
     pageCount: data.numpages || 1,
+    method: 'vision',
   };
 }

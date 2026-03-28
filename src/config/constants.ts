@@ -1,7 +1,15 @@
 // Limites de upload
 export const MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
-export const ALLOWED_MIME_TYPES = ['application/pdf'] as const;
-export const ALLOWED_EXTENSIONS = ['.pdf'] as const;
+export const ALLOWED_MIME_TYPES = [
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+] as const;
+export const ALLOWED_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png', '.webp'] as const;
+
+// Timeout para OCR via Claude Vision
+export const OCR_TIMEOUT_MS = 60_000; // 60 segundos
 
 // Limites de tempo (ms)
 export const ANALYSIS_TIMEOUT_MS = 120_000; // 2 minutos

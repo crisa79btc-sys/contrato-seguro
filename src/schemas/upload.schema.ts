@@ -7,6 +7,6 @@ export const uploadFileSchema = z.object({
     .number()
     .max(MAX_UPLOAD_SIZE_BYTES, `Arquivo excede o limite de ${MAX_UPLOAD_SIZE_BYTES / 1024 / 1024}MB`),
   type: z.enum(ALLOWED_MIME_TYPES, {
-    errorMap: () => ({ message: 'Formato não suportado. Envie um arquivo PDF.' }),
+    errorMap: () => ({ message: 'Formato não suportado. Envie PDF, JPG, PNG ou WebP.' }),
   }),
 });
