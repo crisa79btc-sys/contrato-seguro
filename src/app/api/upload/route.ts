@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
 import { uploadFileSchema } from '@/schemas/upload.schema';
 import { parsePdf } from '@/lib/parsers/pdf';
-import { MAX_UPLOAD_SIZE_BYTES } from '@/config/constants';
+import { store } from '@/lib/store';
+import { classifyContract } from '@/lib/ai/classifier';
+import { analyzeContract } from '@/lib/ai/analyzer';
 
 // Magic bytes do PDF
 const PDF_MAGIC = Buffer.from([0x25, 0x50, 0x44, 0x46]); // %PDF
@@ -62,23 +64,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Gerar ID do contrato
+    // Gerar ID e salvar no store
     const contractId = randomUUID();
 
-    // TODO: Salvar no Supabase Storage + criar registro na tabela contracts
-    // Por enquanto, retornamos os dados mockados para o frontend funcionar
-    const contract = {
-      contractId,
-      fileName: file.name,
-      fileSize: file.size,
-      pageCount,
-      textLength: text.length,
-      status: 'uploaded' as const,
-    };
+    store.createContract({
+      id: contractId,
+      original_text: text,
+      original_filename: file.name,
+      file_size_bytes: file.size,
+      page_count: pageCount,
+    });
 
-    // TODO: Disparar job de classificação + análise via Inngest
+    // Disparar análise em background (não bloqueia o response)
+    processContract(contractId).catch((err) => {
+      console.error(`Erro ao processar contrato ${contractId}:`, err);
+      store.updateContract(contractId, {
+        status: 'error',
+        error_message: err instanceof Error ? err.message : 'Erro desconhecido',
+      });
+    });
 
-    return NextResponse.json(contract, { status: 201 });
+    return NextResponse.json(
+      {
+        contractId,
+        fileName: file.name,
+        fileSize: file.size,
+        pageCount,
+        status: 'uploaded',
+      },
+      { status: 201 }
+    );
   } catch (err) {
     console.error('Erro no upload:', err);
     return NextResponse.json(
@@ -88,4 +103,35 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Next.js App Router: o limite de body é configurado no next.config.mjs
+/**
+ * Processa o contrato em background: classifica + analisa.
+ * No futuro será substituído por Inngest background job.
+ */
+async function processContract(contractId: string) {
+  const contract = store.getContract(contractId);
+  if (!contract) throw new Error('Contrato não encontrado');
+
+  // Etapa 1: Classificação
+  store.updateContract(contractId, { status: 'classifying' });
+
+  const { classification } = await classifyContract(contract.original_text);
+
+  store.updateContract(contractId, {
+    status: 'classified',
+    contract_type: classification.type,
+    classification_result: classification,
+  });
+
+  // Etapa 2: Análise gratuita
+  store.updateContract(contractId, { status: 'analyzing' });
+
+  const { analysis, usage } = await analyzeContract(contract.original_text, 'free');
+
+  store.updateContract(contractId, {
+    status: 'analyzed',
+    analysis_result: {
+      ...analysis,
+      usage,
+    },
+  });
+}
