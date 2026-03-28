@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
 import { uploadFileSchema } from '@/schemas/upload.schema';
 import { parsePdf } from '@/lib/parsers/pdf';
+import { cleanContractText } from '@/lib/parsers/text-cleaner';
 import { store } from '@/lib/store';
 import { classifyContract } from '@/lib/ai/classifier';
 import { analyzeContract } from '@/lib/ai/analyzer';
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest) {
     let pageCount: number;
     try {
       const result = await parsePdf(buffer);
-      text = result.text;
+      text = cleanContractText(result.text);
       pageCount = result.pageCount;
     } catch (err) {
       return NextResponse.json(

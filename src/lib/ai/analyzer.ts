@@ -1,6 +1,7 @@
 import { callClaude } from './client';
 import { safeParseJSON } from './utils';
 import { AI_MODELS, AI_MAX_TOKENS, ANALYSIS_TIMEOUT_MS } from '@/config/constants';
+import { analysisOutputFreeSchema, analysisOutputFullSchema } from '@/schemas/ai-output.schema';
 import type { AIAnalysisOutput, AnalysisTier } from '@/types';
 
 const SYSTEM_PROMPT = `Voce e um analista juridico especializado em contratos brasileiros. Sua funcao e analisar contratos, identificar problemas e gerar um relatorio estruturado em JSON.
@@ -131,10 +132,17 @@ Analise o contrato acima seguindo todas as instrucoes do sistema. Retorne APENAS
     timeoutMs: ANALYSIS_TIMEOUT_MS,
   });
 
-  const parsed = safeParseJSON(result.content);
+  const raw = safeParseJSON(result.content);
+  const schema = tier === 'free' ? analysisOutputFreeSchema : analysisOutputFullSchema;
+  const validated = schema.safeParse(raw);
+  if (!validated.success) {
+    throw new Error(
+      `Análise retornou formato inválido: ${validated.error.issues.map((i) => i.message).join(', ')}`
+    );
+  }
 
   return {
-    analysis: parsed as AIAnalysisOutput,
+    analysis: validated.data as AIAnalysisOutput,
     usage: {
       tokensInput: result.tokensInput,
       tokensOutput: result.tokensOutput,

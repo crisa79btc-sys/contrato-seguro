@@ -1,6 +1,7 @@
 import { callClaude } from './client';
 import { safeParseJSON } from './utils';
 import { AI_MODELS, AI_MAX_TOKENS, CLASSIFICATION_TIMEOUT_MS } from '@/config/constants';
+import { classifierOutputSchema } from '@/schemas/ai-output.schema';
 import type { AIClassifierOutput } from '@/types';
 
 const SYSTEM_PROMPT = `Classifique o tipo do contrato abaixo. Retorne APENAS JSON valido.
@@ -51,7 +52,14 @@ export async function classifyContract(contractText: string) {
     timeoutMs: CLASSIFICATION_TIMEOUT_MS,
   });
 
-  const parsed = safeParseJSON<AIClassifierOutput>(result.content);
+  const raw = safeParseJSON(result.content);
+  const validated = classifierOutputSchema.safeParse(raw);
+  if (!validated.success) {
+    throw new Error(
+      `Classificação retornou formato inválido: ${validated.error.issues.map((i) => i.message).join(', ')}`
+    );
+  }
+  const parsed = validated.data as AIClassifierOutput;
 
   return {
     classification: parsed,
