@@ -1,5 +1,6 @@
 import { callClaude } from './client';
-import { AI_MODELS, AI_MAX_TOKENS } from '@/config/constants';
+import { safeParseJSON } from './utils';
+import { AI_MODELS, AI_MAX_TOKENS, ANALYSIS_TIMEOUT_MS } from '@/config/constants';
 import type { AIAnalysisOutput, AnalysisTier } from '@/types';
 
 const SYSTEM_PROMPT = `Voce e um analista juridico especializado em contratos brasileiros. Sua funcao e analisar contratos, identificar problemas e gerar um relatorio estruturado em JSON.
@@ -127,9 +128,10 @@ Analise o contrato acima seguindo todas as instrucoes do sistema. Retorne APENAS
     userPrompt,
     maxTokens,
     temperature: 0.2,
+    timeoutMs: ANALYSIS_TIMEOUT_MS,
   });
 
-  const parsed = JSON.parse(result.content);
+  const parsed = safeParseJSON(result.content);
 
   return {
     analysis: parsed as AIAnalysisOutput,

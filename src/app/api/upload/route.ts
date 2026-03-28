@@ -77,10 +77,11 @@ export async function POST(request: NextRequest) {
 
     // Disparar análise em background (não bloqueia o response)
     processContract(contractId).catch((err) => {
-      console.error(`Erro ao processar contrato ${contractId}:`, err);
+      // Safety net: caso algum erro não tratado escape do processContract
+      console.error(`Erro inesperado no contrato ${contractId}:`, err);
       store.updateContract(contractId, {
         status: 'error',
-        error_message: err instanceof Error ? err.message : 'Erro desconhecido',
+        error_message: 'Erro inesperado ao processar o contrato. Tente novamente.',
       });
     });
 
@@ -114,24 +115,44 @@ async function processContract(contractId: string) {
   // Etapa 1: Classificação
   store.updateContract(contractId, { status: 'classifying' });
 
-  const { classification } = await classifyContract(contract.original_text);
-
-  store.updateContract(contractId, {
-    status: 'classified',
-    contract_type: classification.type,
-    classification_result: classification,
-  });
+  let contractType = 'outro';
+  try {
+    const { classification } = await classifyContract(contract.original_text);
+    contractType = classification.type;
+    store.updateContract(contractId, {
+      status: 'classified',
+      contract_type: classification.type,
+      classification_result: classification,
+    });
+  } catch (err) {
+    console.error(`Erro na classificação do contrato ${contractId}:`, err);
+    // Classificação falhou, mas podemos continuar com tipo 'outro'
+    store.updateContract(contractId, {
+      status: 'classified',
+      contract_type: 'outro',
+    });
+  }
 
   // Etapa 2: Análise gratuita
   store.updateContract(contractId, { status: 'analyzing' });
 
-  const { analysis, usage } = await analyzeContract(contract.original_text, 'free');
+  try {
+    const { analysis, usage } = await analyzeContract(contract.original_text, 'free');
 
-  store.updateContract(contractId, {
-    status: 'analyzed',
-    analysis_result: {
-      ...analysis,
-      usage,
-    },
-  });
+    store.updateContract(contractId, {
+      status: 'analyzed',
+      analysis_result: {
+        ...analysis,
+        usage,
+      },
+    });
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : 'Erro desconhecido na análise';
+    console.error(`Erro na análise do contrato ${contractId}:`, err);
+    store.updateContract(contractId, {
+      status: 'error',
+      error_message: `Erro na análise: ${message}`,
+    });
+  }
 }

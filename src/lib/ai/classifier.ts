@@ -1,5 +1,6 @@
 import { callClaude } from './client';
-import { AI_MODELS, AI_MAX_TOKENS } from '@/config/constants';
+import { safeParseJSON } from './utils';
+import { AI_MODELS, AI_MAX_TOKENS, CLASSIFICATION_TIMEOUT_MS } from '@/config/constants';
 import type { AIClassifierOutput } from '@/types';
 
 const SYSTEM_PROMPT = `Classifique o tipo do contrato abaixo. Retorne APENAS JSON valido.
@@ -47,9 +48,10 @@ export async function classifyContract(contractText: string) {
     userPrompt: `<trecho>\n${snippet}\n</trecho>`,
     maxTokens: AI_MAX_TOKENS.classifier,
     temperature: 0.1,
+    timeoutMs: CLASSIFICATION_TIMEOUT_MS,
   });
 
-  const parsed = JSON.parse(result.content) as AIClassifierOutput;
+  const parsed = safeParseJSON<AIClassifierOutput>(result.content);
 
   return {
     classification: parsed,
