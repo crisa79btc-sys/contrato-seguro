@@ -1,7 +1,234 @@
+'use client';
+
+import { useCallback, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Header from '@/components/ui/Header';
+import Footer from '@/components/ui/Footer';
+import FileUpload from '@/components/upload/FileUpload';
+
 export default function Home() {
+  const router = useRouter();
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const handleFileSelected = useCallback(
+    async (file: File) => {
+      setIsUploading(true);
+      setUploadError(null);
+
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!res.ok) {
+          const data = await res.json().catch(() => null);
+          throw new Error(data?.error || 'Erro ao enviar arquivo. Tente novamente.');
+        }
+
+        const data = await res.json();
+        router.push(`/analise/${data.contractId}`);
+      } catch (err) {
+        setUploadError(err instanceof Error ? err.message : 'Erro inesperado. Tente novamente.');
+        setIsUploading(false);
+      }
+    },
+    [router]
+  );
+
   return (
-    <main className="flex min-h-screen items-center justify-center">
-      <h1 className="text-2xl font-bold">ContratoSeguro</h1>
-    </main>
+    <div className="flex min-h-screen flex-col">
+      <Header />
+
+      <main className="flex-1">
+        {/* Hero Section */}
+        <section className="px-4 pb-16 pt-12 sm:pt-20">
+          <div className="mx-auto max-w-3xl text-center">
+            <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 sm:text-5xl">
+              Seu contrato tem{' '}
+              <span className="text-brand-600">cláusulas abusivas</span>?
+            </h1>
+            <p className="mx-auto mt-4 max-w-xl text-base text-gray-600 sm:text-lg">
+              Descubra em minutos. Faça upload do seu contrato e receba uma análise gratuita com
+              inteligência artificial.
+            </p>
+
+            <div className="mt-10">
+              <FileUpload
+                onFileSelected={handleFileSelected}
+                isUploading={isUploading}
+                error={uploadError}
+              />
+            </div>
+
+            <div className="mt-6 flex items-center justify-center gap-6 text-xs text-gray-400">
+              <span className="flex items-center gap-1">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+                </svg>
+                Seus dados são criptografados
+              </span>
+              <span className="flex items-center gap-1">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                </svg>
+                Excluído em 7 dias
+              </span>
+              <span className="flex items-center gap-1">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 0 1-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 0 1 4.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0 1 12 15a9.065 9.065 0 0 0-6.23.693L5 14.5m14.8.8 1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0 1 12 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
+                </svg>
+                Análise gratuita
+              </span>
+            </div>
+          </div>
+        </section>
+
+        {/* Como Funciona */}
+        <section className="bg-gray-50 px-4 py-16">
+          <div className="mx-auto max-w-4xl">
+            <h2 className="text-center text-2xl font-bold text-gray-900 sm:text-3xl">
+              Como funciona
+            </h2>
+            <div className="mt-10 grid gap-8 sm:grid-cols-3">
+              <Step
+                number={1}
+                title="Envie seu contrato"
+                description="Faça upload do PDF do seu contrato. Simples, rápido e seguro."
+                icon={
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+                }
+              />
+              <Step
+                number={2}
+                title="Receba a análise"
+                description="Nossa IA identifica cláusulas abusivas, riscos e falhas com fundamentação legal."
+                icon={
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+                }
+              />
+              <Step
+                number={3}
+                title="Baixe a versão corrigida"
+                description="Receba seu contrato corrigido, pronto para assinar, em Word ou PDF."
+                icon={
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                }
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* Tipos de Contrato */}
+        <section className="px-4 py-16">
+          <div className="mx-auto max-w-4xl">
+            <h2 className="text-center text-2xl font-bold text-gray-900 sm:text-3xl">
+              Tipos de contrato suportados
+            </h2>
+            <div className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3">
+              <ContractType label="Aluguel" emoji="🏠" />
+              <ContractType label="Trabalho" emoji="💼" />
+              <ContractType label="Prestação de Serviço" emoji="🔧" />
+              <ContractType label="Compra e Venda" emoji="🤝" />
+              <ContractType label="Financiamento" emoji="🏦" />
+              <ContractType label="Termos Digitais" emoji="💻" />
+            </div>
+          </div>
+        </section>
+
+        {/* FAQ */}
+        <section className="bg-gray-50 px-4 py-16">
+          <div className="mx-auto max-w-3xl">
+            <h2 className="text-center text-2xl font-bold text-gray-900 sm:text-3xl">
+              Perguntas frequentes
+            </h2>
+            <div className="mt-10 space-y-6">
+              <FAQ
+                question="O ContratoSeguro substitui um advogado?"
+                answer="Não. O ContratoSeguro é uma ferramenta de apoio que utiliza inteligência artificial para identificar possíveis riscos. Para decisões jurídicas importantes, recomendamos sempre consultar um advogado."
+              />
+              <FAQ
+                question="Meu contrato é armazenado?"
+                answer="Seus documentos são criptografados e excluídos automaticamente após 7 dias. Não utilizamos seus contratos para treinar modelos de IA nem compartilhamos com terceiros."
+              />
+              <FAQ
+                question="A análise tem validade jurídica?"
+                answer="A análise é um instrumento informativo e educacional, não um parecer jurídico. Ela identifica padrões e compara com a legislação brasileira para apontar possíveis riscos."
+              />
+              <FAQ
+                question="Funciona para qualquer contrato?"
+                answer="Sim, analisamos qualquer contrato em português brasileiro, com especialização em aluguel, trabalho, prestação de serviço, compra e venda e financiamento."
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* CTA Final */}
+        <section className="px-4 py-16">
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="text-2xl font-bold text-gray-900 sm:text-3xl">
+              Analise seu contrato agora
+            </h2>
+            <p className="mt-3 text-gray-600">
+              É gratuito, rápido e pode evitar prejuízos de milhares de reais.
+            </p>
+            <div className="mt-8">
+              <button
+                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                className="rounded-xl bg-brand-600 px-8 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-600/25 transition-all hover:bg-brand-700 hover:shadow-xl hover:shadow-brand-600/30 active:scale-95"
+              >
+                Fazer upload do contrato
+              </button>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <Footer />
+    </div>
+  );
+}
+
+function Step({ number, title, description, icon }: { number: number; title: string; description: string; icon: React.ReactNode }) {
+  return (
+    <div className="flex flex-col items-center text-center">
+      <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-100">
+        <svg className="h-6 w-6 text-brand-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+          {icon}
+        </svg>
+        <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-brand-600 text-xs font-bold text-white">
+          {number}
+        </span>
+      </div>
+      <h3 className="mt-4 text-base font-semibold text-gray-900">{title}</h3>
+      <p className="mt-2 text-sm text-gray-600">{description}</p>
+    </div>
+  );
+}
+
+function ContractType({ label, emoji }: { label: string; emoji: string }) {
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
+      <span className="text-2xl" role="img" aria-label={label}>{emoji}</span>
+      <span className="text-sm font-medium text-gray-700">{label}</span>
+    </div>
+  );
+}
+
+function FAQ({ question, answer }: { question: string; answer: string }) {
+  return (
+    <details className="group rounded-xl border border-gray-200 bg-white">
+      <summary className="flex cursor-pointer items-center justify-between p-4 text-sm font-semibold text-gray-900 [&::-webkit-details-marker]:hidden">
+        {question}
+        <svg className="h-5 w-5 shrink-0 text-gray-400 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+        </svg>
+      </summary>
+      <p className="px-4 pb-4 text-sm leading-relaxed text-gray-600">{answer}</p>
+    </details>
   );
 }
