@@ -136,7 +136,16 @@ export type AICorrectionOutput = {
   changes_summary: string;
   changes: AICorrectionChange[];
   stats: AICorrectionStats;
+  legal_notes: AILegalNote[];
   disclaimer: string;
+};
+
+/** Nota jurisprudencial sobre questão pacificada nos Tribunais Superiores */
+export type AILegalNote = {
+  topic: string;
+  issue: string;
+  legal_basis: string;
+  explanation: string;
 };
 
 /** Alteracao individual feita pela IA na correcao */

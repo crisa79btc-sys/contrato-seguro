@@ -111,6 +111,7 @@ export type {
   AICorrectionOutput,
   AICorrectionChange,
   AICorrectionStats,
+  AILegalNote,
 
   // Negociação IA
   AINegotiationInput,

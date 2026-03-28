@@ -49,24 +49,33 @@ src/
     layout.tsx                      # Layout global (pt-BR, metadata SEO)
     analise/[id]/page.tsx           # Resultado da análise (polling + exibição)
     api/
-      upload/route.ts               # POST: recebe PDF, parseia, dispara análise
+      upload/route.ts               # POST: recebe PDF/JPG/PNG, parseia, dispara análise
       contract/[id]/status/route.ts  # GET: polling do status da análise
+      contract/[id]/report/route.ts  # GET: download do relatório em PDF
   components/
     ui/Header.tsx                   # Header com logo
     ui/Footer.tsx                   # Footer com disclaimer
-    upload/FileUpload.tsx           # Upload drag-drop + validação
-    analysis/RiskScore.tsx          # Gauge circular do score 0-100
-    analysis/IssueCard.tsx          # Card de problema (com modo locked)
+    upload/FileUpload.tsx           # Upload drag-drop + validação (PDF, JPG, PNG, WebP)
+    analysis/RiskScore.tsx          # Gauge circular animado do score 0-100
+    analysis/IssueCard.tsx          # Card de problema (com modo locked + stagger)
     analysis/ProcessingStatus.tsx   # Tela de espera com progresso
+    analysis/ShareButtons.tsx       # Compartilhar WhatsApp + copiar link
+    history/RecentAnalyses.tsx      # Histórico local de análises
   lib/
     ai/client.ts                    # Client Anthropic + callClaude()
     ai/classifier.ts                # Classificador de tipo de contrato
     ai/analyzer.ts                  # Analisador (tier free/full)
-    parsers/pdf.ts                  # Extração de texto de PDF
-    db/supabase.ts                  # Client Supabase (preparado, não usado ainda)
+    ai/utils.ts                     # safeParseJSON (fallback para JSON malformado)
+    parsers/pdf.ts                  # Extração de texto de PDF (com fallback Vision)
+    parsers/ocr-vision.ts           # OCR via Claude Vision (imagens e PDFs escaneados)
+    parsers/text-cleaner.ts         # Limpeza de texto (paginação, truncamento)
+    export/pdf-report.ts            # Geração de relatório PDF
+    db/supabase.ts                  # Client Supabase (lazy, não usado ainda)
     store.ts                        # Store em memória para dev local
+    local-history.ts                # Histórico local no localStorage
   config/constants.ts               # Constantes, modelos IA, feature flags
   schemas/upload.schema.ts          # Validação Zod do upload
+  schemas/ai-output.schema.ts       # Validação Zod dos outputs da IA
   types/
     database.ts                     # Tipos das tabelas do banco
     api.ts                          # Tipos request/response das APIs
@@ -76,10 +85,11 @@ src/
 docs/
   database/001_initial_schema.sql   # Migração SQL completa (9 tabelas + RLS)
   database/README.md                # Como aplicar migrações
-  prompts/system-analyzer.md        # Prompt otimizado do analisador
+  prompts/system-analyzer.md        # Prompt do analisador (com jurisprudência pacificada)
   prompts/system-classifier.md      # Prompt do classificador
-  prompts/system-corrector.md       # Prompt do corretor (não implementado)
+  prompts/system-corrector.md       # Prompt do corretor (com jurisprudência + legal_notes)
   prompts/system-negotiation.md     # Prompt de negociação (não implementado)
+  prompts/jurisprudencia-pacificada.md # Base de jurisprudência dos Tribunais Superiores
   api/README.md                     # Documentação das rotas de API
   api/realtime.md                   # Documentação Supabase Realtime
   dependencies.md                   # Lista de dependências com justificativa
@@ -102,6 +112,8 @@ docs/
 - Timeout + retry (2x) nas chamadas Claude
 - Error handling granular (classificação pode falhar sem bloquear análise)
 - Limpeza de texto (remove paginação PDF, trunca contratos longos)
+- OCR via Claude Vision (PDFs escaneados + imagens JPG/PNG/WebP)
+- Jurisprudência pacificada integrada nos prompts (STF, STJ, TST)
 - 29 testes unitários (Vitest)
 
 ## O que falta para completar a Fase 1
