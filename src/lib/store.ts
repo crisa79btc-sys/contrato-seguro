@@ -1,5 +1,6 @@
 /**
  * Store em memória para desenvolvimento local.
+ * Usa globalThis para persistir entre hot reloads do Next.js.
  * TODO: Substituir por Supabase quando configurado.
  */
 
@@ -17,7 +18,16 @@ type ContractRecord = {
   created_at: string;
 };
 
-const contracts = new Map<string, ContractRecord>();
+// Persistir o Map no globalThis para sobreviver ao hot reload
+const globalStore = globalThis as typeof globalThis & {
+  __contractStore?: Map<string, ContractRecord>;
+};
+
+if (!globalStore.__contractStore) {
+  globalStore.__contractStore = new Map<string, ContractRecord>();
+}
+
+const contracts = globalStore.__contractStore;
 
 export const store = {
   createContract(data: {
