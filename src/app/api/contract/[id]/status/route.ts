@@ -20,12 +20,20 @@ export async function GET(
     filename: contract.original_filename,
   };
 
+  if (contract.error_message) {
+    response.error_message = contract.error_message;
+  }
+
   if (contract.status === 'error') {
     response.error = contract.error_message;
   }
 
-  if (contract.status === 'analyzed' && contract.analysis_result) {
+  if (['analyzed', 'correcting', 'corrected'].includes(contract.status) && contract.analysis_result) {
     response.result = contract.analysis_result;
+  }
+
+  if (contract.status === 'corrected' && contract.correction_result) {
+    response.correction = contract.correction_result;
   }
 
   return NextResponse.json(response);

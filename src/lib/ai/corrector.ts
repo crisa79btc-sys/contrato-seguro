@@ -1,16 +1,9 @@
----
-name: "ContratoSeguro Corrector"
-description: "System prompt para correcao e reescrita de contratos brasileiros baseada na analise previa"
-model: "claude-haiku"
-version: "2.0.0"
-updated_at: "2026-03-28"
-types_ref: "AICorrectionOutput em docs/types/ai.ts"
----
+import { callClaude } from './client';
+import { safeParseJSON } from './utils';
+import { AI_MODELS, AI_MAX_TOKENS, CORRECTION_TIMEOUT_MS } from '@/config/constants';
+import { correctionOutputSchema, type CorrectionOutput } from '@/schemas/ai-output.schema';
 
-# SYSTEM PROMPT — Corretor de Contratos
-
-```
-Voce e um redator juridico especializado em contratos brasileiros. Sua funcao e corrigir o contrato recebido com base na analise previa, gerando um contrato revisado completo.
+const SYSTEM_PROMPT = `Voce e um redator juridico especializado em contratos brasileiros. Sua funcao e corrigir o contrato recebido com base na analise previa, gerando um contrato revisado completo.
 
 <guardrails>
 REGRAS INVIOLAVEIS:
@@ -18,7 +11,7 @@ REGRAS INVIOLAVEIS:
 2. MANTENHA todos os dados originais do contrato (nomes, CPFs, CNPJs, enderecos, valores, datas). NAO substitua por placeholders. O contrato corrigido deve estar PRONTO PARA USO, com os mesmos dados do original.
 3. Mantenha a nomenclatura original das partes (CONTRATANTE/CONTRATADO, LOCADOR/LOCATARIO, EMPREGADOR/EMPREGADO, etc.).
 4. NUNCA remova clausula sem substituir por versao corrigida, exceto se for inteiramente abusiva e sem conteudo aproveitavel.
-5. Retorne APENAS JSON valido, sem texto antes ou depois. SEM blocos markdown (sem ```).
+5. Retorne APENAS JSON valido, sem texto antes ou depois. SEM blocos markdown.
 6. No campo corrected_text, escreva APENAS o texto do contrato limpo. NAO inclua tags como [MODIFIED], [ADDED], [REMOVED] etc no texto. O contrato deve parecer um documento final pronto para assinar.
 7. Responda SEMPRE em portugues brasileiro. NUNCA use ingles.
 </guardrails>
@@ -154,48 +147,67 @@ Retorne APENAS JSON valido com esta estrutura:
   ],
   "disclaimer": "Este contrato corrigido e uma sugestao gerada por inteligencia artificial. Recomenda-se revisao por advogado antes da assinatura. A ContratoSeguro nao e um escritorio de advocacia."
 }
-</formato_saida>
+</formato_saida>`;
 
-<exemplo_alteracao>
-Exemplo de entrada e saida para uma clausula:
-
-Original:
-"CLAUSULA 5a — A CONTRATADA nao podera rescindir este contrato antes de 24 meses, sob pena de multa equivalente ao valor total do contrato."
-
-Corrigido:
-"[MODIFIED] CLAUSULA 5a — DA RESCISAO. Qualquer das partes pode rescindir este contrato mediante notificacao por escrito com antecedencia minima de trinta (30) dias. §1o Em caso de rescisao antecipada sem justa causa, a parte que rescindir deve pagar a outra multa equivalente a dez por cento (10%) do valor restante do contrato, proporcional ao periodo nao cumprido. §2o Constituem justa causa para rescisao imediata, sem incidencia de multa: I — descumprimento de obrigacao essencial; II — falencia ou recuperacao judicial de qualquer das partes; III — caso fortuito ou forca maior que impossibilite a continuidade."
-
-Registro na tabela de changes:
-{
-  "clause_id": "5a",
-  "action": "modified",
-  "original_summary": "Proibia rescisao pela contratada com multa de 100% do valor total",
-  "new_summary": "Permite rescisao bilateral com aviso de 30 dias e multa proporcional de 10%",
-  "legal_basis": "CC art. 413 — reducao equitativa da clausula penal; CC art. 412 — clausula penal nao pode exceder valor da obrigacao principal. Multa de 100% e abusiva e gera desequilibrio contratual."
-}
-
-Exemplo de legal_notes para essa correcao:
-{
-  "topic": "Multa rescisoria",
-  "issue": "Multa de 100% do valor total do contrato por rescisao antecipada",
-  "legal_basis": "CC art. 412, CC art. 413, CDC art. 51 IV. Jurisprudencia pacificada do STJ reconhece que clausula penal compensatoria nao pode exceder o valor da obrigacao principal e o juiz pode reduzi-la equitativamente.",
-  "explanation": "Os tribunais brasileiros entendem que multas desproporcionais funcionam como mecanismo de aprisionamento contratual, impedindo o exercicio legitimo do direito de rescisao. O Codigo Civil determina que a penalidade deve guardar proporcionalidade com o prejuizo efetivo, e o juiz tem o poder-dever de reduzir multas excessivas para restabelecer o equilibrio entre as partes."
-}
-</exemplo_alteracao>
-```
-
----
-
-# USER PROMPT TEMPLATE
-
-```
-<contrato_original>
-{{contract_text}}
+/**
+ * Corrige um contrato com base na análise prévia.
+ * Usa Haiku com timeout de 3 minutos.
+ */
+export async function correctContract(contractText: string, analysisResult: unknown) {
+  const userPrompt = `<contrato_original>
+${contractText}
 </contrato_original>
 
 <analise_previa>
-{{analysis_json}}
+${JSON.stringify(analysisResult, null, 2)}
 </analise_previa>
 
-Corrija o contrato acima seguindo todas as instrucoes do sistema. Retorne APENAS o JSON.
-```
+Corrija o contrato acima seguindo todas as instrucoes do sistema. Retorne APENAS o JSON.`;
+
+  const result = await callClaude({
+    model: AI_MODELS.correction,
+    systemPrompt: SYSTEM_PROMPT,
+    userPrompt,
+    maxTokens: AI_MAX_TOKENS.correction,
+    temperature: 0.2,
+    timeoutMs: CORRECTION_TIMEOUT_MS,
+  });
+
+  const raw = safeParseJSON(result.content);
+
+  let validated = correctionOutputSchema.safeParse(raw);
+
+  // Fallback: se o Haiku retornou corrected_text mas o schema falhou em campos secundários,
+  // reconstruir com os dados disponíveis
+  if (!validated.success && raw && typeof raw === 'object' && 'corrected_text' in raw) {
+    const rawObj = raw as Record<string, unknown>;
+    console.warn('[Correção] Validação parcial — reconstruindo com defaults. Erros:',
+      validated.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; '));
+
+    validated = correctionOutputSchema.safeParse({
+      corrected_text: rawObj.corrected_text,
+      changes_summary: rawObj.changes_summary || 'Contrato corrigido com base na análise prévia.',
+      changes: Array.isArray(rawObj.changes) ? rawObj.changes : [],
+      stats: rawObj.stats || { total_changes: 0, removed: 0, modified: 0, added: 0 },
+      legal_notes: Array.isArray(rawObj.legal_notes) ? rawObj.legal_notes : [],
+      disclaimer: rawObj.disclaimer || undefined,
+    });
+  }
+
+  if (!validated.success) {
+    const fields = validated.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`);
+    console.error('[Correção] Validação falhou completamente:', fields.join('; '));
+    console.error('[Correção] Campos recebidos:', raw ? Object.keys(raw as object).join(', ') : 'null');
+    throw new Error('A IA retornou uma resposta em formato inválido. Tente novamente.');
+  }
+
+  return {
+    correction: validated.data as CorrectionOutput,
+    usage: {
+      tokensInput: result.tokensInput,
+      tokensOutput: result.tokensOutput,
+      model: result.model,
+      durationMs: result.durationMs,
+    },
+  };
+}

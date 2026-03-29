@@ -13,6 +13,7 @@ export const OCR_TIMEOUT_MS = 60_000; // 60 segundos
 
 // Limites de tempo (ms)
 export const ANALYSIS_TIMEOUT_MS = 120_000; // 2 minutos
+export const CORRECTION_TIMEOUT_MS = 180_000; // 3 minutos
 export const CLASSIFICATION_TIMEOUT_MS = 15_000; // 15 segundos
 
 // Contratos
@@ -31,7 +32,7 @@ export const AI_MAX_TOKENS = {
   classifier: 256,
   analysis_free: 2048,
   analysis_full: 4096,
-  correction: 8192,
+  correction: 16384,
   negotiation: 4096,
 } as const;
 

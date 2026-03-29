@@ -27,7 +27,7 @@ export const analysisOutputFreeSchema = z.object({
         explanation: z.string(),
       })
     )
-    .max(3),
+    .transform((arr) => arr.slice(0, 3)),
   executive_summary: z.string().min(1),
 });
 
@@ -78,6 +78,40 @@ export const analysisOutputFullSchema = z.object({
   executive_summary: z.string(),
 });
 
+// Schema da correção (tolerante a variações do Haiku)
+export const correctionOutputSchema = z.object({
+  corrected_text: z.string().min(1),
+  changes_summary: z.string().default('Contrato corrigido com base na análise prévia.'),
+  changes: z.array(
+    z.object({
+      clause_id: z.string(),
+      action: z.string().transform((v) => {
+        const valid = ['removed', 'modified', 'clarified', 'added', 'updated', 'simplified'];
+        return valid.includes(v.toLowerCase()) ? v.toLowerCase() : 'modified';
+      }),
+      original_summary: z.string().default(''),
+      new_summary: z.string().default(''),
+      legal_basis: z.string().default(''),
+    })
+  ).default([]),
+  stats: z.object({
+    total_changes: z.number().min(0),
+    removed: z.number().min(0).default(0),
+    modified: z.number().min(0).default(0),
+    added: z.number().min(0).default(0),
+  }).default({ total_changes: 0, removed: 0, modified: 0, added: 0 }),
+  legal_notes: z.array(
+    z.object({
+      topic: z.string(),
+      issue: z.string().default(''),
+      legal_basis: z.string().default(''),
+      explanation: z.string().default(''),
+    })
+  ).default([]),
+  disclaimer: z.string().default('Este contrato corrigido é uma sugestão gerada por inteligência artificial. Recomenda-se revisão por advogado antes da assinatura.'),
+});
+
 export type ClassifierOutput = z.infer<typeof classifierOutputSchema>;
 export type AnalysisOutputFree = z.infer<typeof analysisOutputFreeSchema>;
 export type AnalysisOutputFull = z.infer<typeof analysisOutputFullSchema>;
+export type CorrectionOutput = z.infer<typeof correctionOutputSchema>;

@@ -10,6 +10,30 @@ import ShareButtons from '@/components/analysis/ShareButtons';
 import { DISCLAIMER_LEGAL } from '@/config/constants';
 import { addToHistory } from '@/lib/local-history';
 
+type CorrectionChange = {
+  clause_id: string;
+  action: string;
+  original_summary: string;
+  new_summary: string;
+  legal_basis: string;
+};
+
+type LegalNote = {
+  topic: string;
+  issue: string;
+  legal_basis: string;
+  explanation: string;
+};
+
+type CorrectionData = {
+  corrected_text: string;
+  changes_summary: string;
+  changes: CorrectionChange[];
+  stats: { total_changes: number; removed: number; modified: number; added: number };
+  legal_notes: LegalNote[];
+  disclaimer: string;
+};
+
 type AnalysisData = {
   status: string;
   contractType: string | null;
@@ -26,35 +50,65 @@ type AnalysisData = {
     }[];
     executive_summary: string;
   };
+  correction?: CorrectionData;
 };
 
 export default function AnalisePage({ params }: { params: { id: string } }) {
   const [data, setData] = useState<AnalysisData | null>(null);
   const [notFound, setNotFound] = useState(false);
+  const [correcting, setCorrecting] = useState(false);
+  const [correctionError, setCorrectionError] = useState<string | null>(null);
+  const [polling, setPolling] = useState(true);
 
-  const fetchStatus = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/contract/${params.id}/status`);
-      if (res.status === 404) {
-        setNotFound(true);
-        return true; // stop polling
-      }
-      const json = await res.json();
-      setData(json);
-      return json.status === 'analyzed' || json.status === 'error';
-    } catch {
-      return false;
-    }
-  }, [params.id]);
-
+  // Polling único para todos os estados
   useEffect(() => {
+    if (!polling) return;
+
     let active = true;
     let timeout: NodeJS.Timeout;
 
     async function poll() {
       if (!active) return;
-      const done = await fetchStatus();
-      if (!done && active) {
+      try {
+        const res = await fetch(`/api/contract/${params.id}/status`);
+        if (res.status === 404) {
+          setNotFound(true);
+          setPolling(false);
+          return;
+        }
+        const json = await res.json();
+        setData(json);
+
+        // Correção concluída
+        if (json.status === 'corrected' && json.correction) {
+          setCorrecting(false);
+          setPolling(false);
+          return;
+        }
+
+        // Correção falhou (status voltou para analyzed com erro)
+        if (correcting && json.status === 'analyzed' && json.error_message) {
+          setCorrecting(false);
+          setCorrectionError(json.error_message);
+          setPolling(false);
+          return;
+        }
+
+        // Análise completa (sem correção em andamento)
+        if (json.status === 'analyzed' && !correcting) {
+          setPolling(false);
+          return;
+        }
+
+        // Erro geral
+        if (json.status === 'error') {
+          setPolling(false);
+          return;
+        }
+      } catch {
+        // continua polling
+      }
+      if (active) {
         timeout = setTimeout(poll, 2000);
       }
     }
@@ -64,7 +118,24 @@ export default function AnalisePage({ params }: { params: { id: string } }) {
       active = false;
       clearTimeout(timeout);
     };
-  }, [fetchStatus]);
+  }, [polling, correcting, params.id]);
+
+  const handleCorrect = async () => {
+    setCorrecting(true);
+    setCorrectionError(null);
+    try {
+      const res = await fetch(`/api/contract/${params.id}/correct`, { method: 'POST' });
+      if (!res.ok) {
+        const json = await res.json().catch(() => null);
+        throw new Error(json?.error || 'Erro ao iniciar correção.');
+      }
+      // Reativar polling para acompanhar a correção
+      setPolling(true);
+    } catch (err) {
+      setCorrecting(false);
+      setCorrectionError(err instanceof Error ? err.message : 'Erro inesperado.');
+    }
+  };
 
   // Salvar no histórico local quando análise completar
   useEffect(() => {
@@ -84,8 +155,9 @@ export default function AnalisePage({ params }: { params: { id: string } }) {
     !notFound &&
     ['uploaded', 'classifying', 'classified', 'analyzing'].includes(data.status);
 
-  const isComplete = data?.status === 'analyzed' && data.result;
+  const isComplete = ['analyzed', 'correcting', 'corrected'].includes(data?.status || '') && data?.result;
   const isError = data?.status === 'error' || notFound;
+  const hasCorrectionResult = data?.status === 'corrected' && data?.correction;
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -217,22 +289,49 @@ export default function AnalisePage({ params }: { params: { id: string } }) {
                 </a>
               </div>
 
-              {/* CTA futuro (desabilitado na beta) */}
-              <div className="rounded-xl bg-brand-50 p-6 text-center">
-                <h3 className="text-base font-semibold text-brand-900">
-                  Quer o contrato corrigido?
-                </h3>
-                <p className="mt-2 text-sm text-brand-700">
-                  Em breve você poderá baixar a versão corrigida do seu contrato,
-                  com todas as cláusulas abusivas removidas e proteções adicionadas.
-                </p>
-                <button
-                  disabled
-                  className="mt-4 rounded-xl bg-brand-600 px-6 py-2.5 text-sm font-semibold text-white opacity-50 cursor-not-allowed"
-                >
-                  Em breve
-                </button>
-              </div>
+              {/* Correção do contrato */}
+              {!hasCorrectionResult && (
+                <div className="rounded-xl bg-brand-50 p-6 text-center">
+                  <h3 className="text-base font-semibold text-brand-900">
+                    Quer o contrato corrigido?
+                  </h3>
+                  <p className="mt-2 text-sm text-brand-700">
+                    Gere a versão corrigida do seu contrato, com todas as cláusulas
+                    abusivas removidas e proteções adicionadas.
+                  </p>
+
+                  {correctionError && (
+                    <p className="mt-2 text-sm text-red-600">{correctionError}</p>
+                  )}
+
+                  <button
+                    onClick={handleCorrect}
+                    disabled={correcting}
+                    className={`mt-4 rounded-xl px-6 py-2.5 text-sm font-semibold text-white transition-all ${
+                      correcting
+                        ? 'bg-brand-400 cursor-wait'
+                        : 'bg-brand-600 hover:bg-brand-700 active:scale-95 shadow-lg shadow-brand-600/25'
+                    }`}
+                  >
+                    {correcting ? (
+                      <span className="flex items-center gap-2">
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                        Corrigindo contrato...
+                      </span>
+                    ) : (
+                      'Corrigir contrato gratuitamente'
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {/* Resultado da correção */}
+              {hasCorrectionResult && data.correction && (
+                <CorrectionResult
+                  correction={data.correction}
+                  contractId={params.id}
+                />
+              )}
 
               {/* Disclaimer */}
               <p className="text-xs leading-relaxed text-gray-400">{DISCLAIMER_LEGAL}</p>
@@ -267,4 +366,138 @@ function formatContractType(type: string): string {
     outro: 'Outro',
   };
   return map[type] || type;
+}
+
+const ACTION_COLORS: Record<string, string> = {
+  removed: 'bg-red-100 text-red-800',
+  modified: 'bg-blue-100 text-blue-800',
+  clarified: 'bg-purple-100 text-purple-800',
+  added: 'bg-green-100 text-green-800',
+  updated: 'bg-amber-100 text-amber-800',
+  simplified: 'bg-teal-100 text-teal-800',
+};
+
+const ACTION_LABELS: Record<string, string> = {
+  removed: 'Removida',
+  modified: 'Modificada',
+  clarified: 'Clarificada',
+  added: 'Adicionada',
+  updated: 'Atualizada',
+  simplified: 'Simplificada',
+};
+
+function CorrectionResult({ correction, contractId }: { correction: CorrectionData; contractId: string }) {
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="rounded-xl bg-green-50 border border-green-200 p-6 text-center">
+        <div className="flex justify-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
+            <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+            </svg>
+          </div>
+        </div>
+        <h3 className="mt-3 text-base font-semibold text-green-900">Contrato corrigido!</h3>
+        <p className="mt-1 text-sm text-green-700">{correction.changes_summary}</p>
+
+        {/* Estatísticas */}
+        <div className="mt-4 flex flex-wrap justify-center gap-2 text-xs">
+          <span className="rounded-full bg-white px-3 py-1 font-medium text-green-700 shadow-sm">
+            {correction.stats.total_changes} alterações
+          </span>
+          {correction.stats.removed > 0 && (
+            <span className="rounded-full bg-red-100 px-3 py-1 font-medium text-red-700">
+              {correction.stats.removed} removidas
+            </span>
+          )}
+          {correction.stats.modified > 0 && (
+            <span className="rounded-full bg-blue-100 px-3 py-1 font-medium text-blue-700">
+              {correction.stats.modified} modificadas
+            </span>
+          )}
+          {correction.stats.added > 0 && (
+            <span className="rounded-full bg-green-100 px-3 py-1 font-medium text-green-700">
+              {correction.stats.added} adicionadas
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Lista de alterações */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-semibold text-gray-900">Alterações realizadas</h3>
+        {correction.changes.map((change, i) => (
+          <div key={i} className="rounded-xl border border-gray-200 bg-white p-4">
+            <div className="flex items-center gap-2">
+              <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${ACTION_COLORS[change.action] || 'bg-gray-100 text-gray-700'}`}>
+                {ACTION_LABELS[change.action] || change.action}
+              </span>
+              <span className="text-xs font-medium text-gray-500">Cláusula {change.clause_id}</span>
+            </div>
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              <div>
+                <p className="text-xs font-medium text-gray-400">Antes</p>
+                <p className="text-sm text-gray-600 line-through">{change.original_summary}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-gray-400">Depois</p>
+                <p className="text-sm text-gray-700">{change.new_summary}</p>
+              </div>
+            </div>
+            <p className="mt-2 text-xs text-gray-400">{change.legal_basis}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Notas jurídicas */}
+      {correction.legal_notes.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold text-gray-900">Fundamentação jurídica</h3>
+          {correction.legal_notes.map((note, i) => (
+            <details key={i} className="group rounded-xl border border-gray-200 bg-white">
+              <summary className="flex cursor-pointer items-center justify-between p-4 text-sm font-semibold text-gray-900 [&::-webkit-details-marker]:hidden">
+                {note.topic}
+                <svg className="h-5 w-5 shrink-0 text-gray-400 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                </svg>
+              </summary>
+              <div className="px-4 pb-4 space-y-2">
+                <p className="text-sm text-gray-600"><span className="font-medium">Problema:</span> {note.issue}</p>
+                <p className="text-sm text-gray-600"><span className="font-medium">Base legal:</span> <span className="italic">{note.legal_basis}</span></p>
+                <p className="text-sm leading-relaxed text-gray-500">{note.explanation}</p>
+              </div>
+            </details>
+          ))}
+        </div>
+      )}
+
+      {/* Botões de download */}
+      <div className="space-y-3">
+        <h3 className="text-center text-sm font-semibold text-gray-900">Baixar contrato corrigido</h3>
+        <div className="flex flex-col sm:flex-row justify-center gap-3">
+          <a
+            href={`/api/contract/${contractId}/download?format=docx`}
+            download
+            className="flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-600/25 transition-all hover:bg-brand-700 hover:shadow-xl active:scale-95"
+          >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+            </svg>
+            Word (.docx)
+          </a>
+          <a
+            href={`/api/contract/${contractId}/download?format=pdf`}
+            download
+            className="flex items-center justify-center gap-2 rounded-xl border-2 border-brand-600 px-6 py-3 text-sm font-semibold text-brand-600 transition-all hover:bg-brand-50 active:scale-95"
+          >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m.75 12 3 3m0 0 3-3m-3 3v-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+            </svg>
+            PDF (.pdf)
+          </a>
+        </div>
+      </div>
+    </div>
+  );
 }

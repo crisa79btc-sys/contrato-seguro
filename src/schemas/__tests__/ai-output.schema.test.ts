@@ -85,8 +85,8 @@ describe('analysisOutputFreeSchema', () => {
     expect(result.success).toBe(false);
   });
 
-  it('rejeita mais de 3 top_issues', () => {
-    const issues = Array.from({ length: 4 }, (_, i) => ({
+  it('trunca top_issues para no máximo 3', () => {
+    const issues = Array.from({ length: 5 }, (_, i) => ({
       clause_id: String(i),
       original_text_summary: 'teste',
       risk_level: 'high' as const,
@@ -96,7 +96,10 @@ describe('analysisOutputFreeSchema', () => {
       ...validFreeOutput,
       top_issues: issues,
     });
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.top_issues).toHaveLength(3);
+    }
   });
 
   it('rejeita executive_summary vazio', () => {

@@ -14,6 +14,7 @@ type ContractRecord = {
   status: string;
   analysis_result: unknown | null;
   classification_result: unknown | null;
+  correction_result: unknown | null;
   error_message: string | null;
   created_at: string;
 };
@@ -43,6 +44,7 @@ export const store = {
       status: 'uploaded',
       analysis_result: null,
       classification_result: null,
+      correction_result: null,
       error_message: null,
       created_at: new Date().toISOString(),
     };
