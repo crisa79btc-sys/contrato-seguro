@@ -26,7 +26,6 @@ export async function parsePdf(buffer: Buffer): Promise<ParseResult> {
   }
 
   // Fallback: PDF escaneado — usar Claude Vision
-  console.log('PDF sem texto extraível, usando Claude Vision...');
   const visionText = await extractTextFromPdfImages(buffer);
 
   return {

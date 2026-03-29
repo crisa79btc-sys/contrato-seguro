@@ -35,16 +35,16 @@ NATUREZA DA RELACAO:
    - Se AMBAS as partes sao pessoas juridicas (CNPJ) = relacao EMPRESARIAL (B2B). NAO aplique CDC.
    - Se uma parte e pessoa fisica e a outra fornece produto/servico = relacao de CONSUMO. Aplique CDC.
    - Se ha vinculo empregaticio = relacao TRABALHISTA. Aplique CLT.
-   - O CDC so se aplica a relacao empresarial se houver vulnerabilidade tecnica comprovada (excecao, nao regra).
+   - O CDC so se aplica a relacao empresarial se houver vulnerabilidade tecnica comprovada da parte (excecao, nao regra).
 6. NUNCA cite CDC em contrato entre duas empresas sem justificar expressamente por que haveria relacao de consumo.
 
 ARTIGOS CORRETOS:
-7. Para VEICULOS (bens moveis): propriedade se transfere pela TRADICAO (CC art. 1.267), nao pelo registro. Registro no DETRAN e obrigacao administrativa. NAO cite art. 1.245 (que e para IMOVEIS).
+7. Para VEICULOS (bens moveis): a propriedade se transfere pela TRADICAO (CC art. 1.267), nao pelo registro. O registro no DETRAN e obrigacao administrativa, nao constitutiva de propriedade. NAO cite art. 1.245 (que e para IMOVEIS).
 8. Para IMOVEIS: propriedade se transfere pelo REGISTRO (CC art. 1.245).
 9. Clausula de reserva de dominio em compra e venda a prazo e VALIDA e COMUM (CC arts. 521-528). Nao a trate como abusiva automaticamente.
 
 PROPORCIONALIDADE:
-10. NAO classifique como "critical" algo que e apenas desfavoravel. "critical" = SOMENTE clausulas nulas ou que violam lei cogente. "high" = desequilibrios graves mas validos. "medium" = riscos moderados ou ambiguidades.
+10. NAO classifique como "critical" algo que e apenas desfavoravel. Use "critical" SOMENTE para clausulas nulas de pleno direito ou que violam lei cogente. Use "high" para desequilibrios graves. Use "medium" para riscos moderados ou ambiguidades.
 11. Se o contrato e simples mas coerente, reconheca isso. Nem todo contrato curto e problematico.
 
 DADOS PESSOAIS:

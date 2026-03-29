@@ -97,8 +97,8 @@ docs/
 
 ## Fluxo Atual (MVP Beta)
 
-1. Usuário faz upload de PDF na landing page
-2. `POST /api/upload` valida (MIME, magic bytes, tamanho), parseia e limpa texto
+1. Usuário faz upload de PDF ou imagem (JPG/PNG/WebP) na landing page
+2. `POST /api/upload` valida (MIME, magic bytes, tamanho), parseia texto (pdf-parse ou Claude Vision para escaneados/imagens), limpa
 3. Contrato salvo no store em memória, análise disparada em background
 4. Classificação do tipo (Haiku, 15s timeout) → Análise gratuita (Haiku, 120s timeout)
 5. Frontend faz polling em `GET /api/contract/[id]/status` a cada 2s
@@ -126,13 +126,24 @@ docs/
 
 - **Fase 2:** Análise completa paga + contrato corrigido (.docx/.pdf) + Mercado Pago
 - **Fase 3:** Tipos especializados + biblioteca de modelos + blog SEO + auth
-- **Fase 4:** OCR (Claude Vision) + API pública + testes A/B
+- **Fase 4:** API pública + testes A/B + otimização de custos
 
 ## Regras Importantes
 
 - **Mobile-first.** 70%+ do tráfego brasileiro é mobile.
 - **pt-BR em tudo.** Interface, erros, emails — tudo em português brasileiro.
 - **NUNCA commitar chaves de API.** Usar `.env.local`.
-- **Upload máximo:** 10MB, apenas PDF no MVP.
+- **Upload máximo:** 10MB. Aceita PDF, JPG, PNG, WebP.
 - **Disclaimer obrigatório** em toda análise: ferramenta informativa, não parecer jurídico.
 - **Tracking de tokens:** toda chamada à IA registra tokens_input, tokens_output, model, duração e custo estimado.
+- **Prompts sincronizados:** o prompt hardcoded em `src/lib/ai/analyzer.ts` DEVE ser idêntico ao de `docs/prompts/system-analyzer.md`. Ao alterar um, alterar o outro.
+
+## Guardrails Jurídicos (lições aprendidas)
+
+Erros reais detectados em testes que os prompts agora previnem:
+- Não inventar erros aritméticos — verificar a conta antes de afirmar
+- Não aplicar CDC em contratos B2B entre empresas
+- Não chamar de "inválido/nulo" o que é apenas desfavorável
+- Veículos: art. 1.267 (tradição), NÃO art. 1.245 (imóveis)
+- Reserva de domínio é válida (CC arts. 521-528)
+- Classificar severidade proporcionalmente: critical só para nulidades reais
