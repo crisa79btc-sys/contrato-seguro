@@ -1,16 +1,21 @@
 import Anthropic from '@anthropic-ai/sdk';
 
-let client: Anthropic | null = null;
+const globalAI = globalThis as typeof globalThis & {
+  __anthropicClient?: Anthropic;
+  __anthropicKey?: string;
+};
 
 export function getAnthropicClient(): Anthropic {
-  if (!client) {
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
-      throw new Error('ANTHROPIC_API_KEY não configurada');
-    }
-    client = new Anthropic({ apiKey, maxRetries: 2 });
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    throw new Error('ANTHROPIC_API_KEY não configurada');
   }
-  return client;
+  // Recriar client se a chave mudou (ex: .env.local editado em dev)
+  if (!globalAI.__anthropicClient || globalAI.__anthropicKey !== apiKey) {
+    globalAI.__anthropicClient = new Anthropic({ apiKey, maxRetries: 2 });
+    globalAI.__anthropicKey = apiKey;
+  }
+  return globalAI.__anthropicClient;
 }
 
 export type AICallResult = {
