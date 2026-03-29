@@ -65,11 +65,14 @@ src/
     ai/client.ts                    # Client Anthropic + callClaude()
     ai/classifier.ts                # Classificador de tipo de contrato
     ai/analyzer.ts                  # Analisador (tier free/full)
+    ai/corrector.ts                 # Corretor de contratos (Haiku, 16384 tokens, 3min timeout)
     ai/utils.ts                     # safeParseJSON (fallback para JSON malformado)
     parsers/pdf.ts                  # Extração de texto de PDF (com fallback Vision)
     parsers/ocr-vision.ts           # OCR via Claude Vision (imagens e PDFs escaneados)
     parsers/text-cleaner.ts         # Limpeza de texto (paginação, truncamento)
-    export/pdf-report.ts            # Geração de relatório PDF
+    export/pdf-report.ts            # Geração de relatório PDF da análise
+    export/pdf-corrected.ts         # Geração de PDF do contrato corrigido (formatação profissional)
+    export/docx-corrected.ts        # Geração de DOCX do contrato corrigido (Word)
     db/supabase.ts                  # Client Supabase (lazy, não usado ainda)
     store.ts                        # Store em memória para dev local
     local-history.ts                # Histórico local no localStorage
@@ -104,6 +107,13 @@ docs/
 5. Frontend faz polling em `GET /api/contract/[id]/status` a cada 2s
 6. Resultado exibido: score animado + top 3 problemas + total + cards locked
 7. Usuário pode: compartilhar (WhatsApp/link), baixar relatório PDF, ver histórico
+8. Usuário clica "Corrigir contrato gratuitamente" → `POST /api/contract/[id]/correct`
+9. Correção em background (Haiku, 16384 tokens, 3min timeout) → polling detecta conclusão
+10. Resultado: cards de alterações + notas jurídicas expandíveis + download DOCX/PDF
+
+### Rotas da API de correção
+- `POST /api/contract/[id]/correct` — dispara correção em background, retorna 202
+- `GET /api/contract/[id]/download?format=docx|pdf` — download do contrato corrigido
 
 ## Robustez implementada
 
@@ -114,6 +124,9 @@ docs/
 - Limpeza de texto (remove paginação PDF, trunca contratos longos)
 - OCR via Claude Vision (PDFs escaneados + imagens JPG/PNG/WebP)
 - Jurisprudência pacificada integrada nos prompts (STF, STJ, TST)
+- Schema Zod da correção tolerante com defaults (campos opcionais não rejeitam)
+- top_issues trunca para 3 em vez de rejeitar quando IA retorna mais
+- Corretor com fallback: reconstrói JSON se corrected_text existe mas campos secundários falham
 - 29 testes unitários (Vitest)
 
 ## O que falta para completar a Fase 1
@@ -124,7 +137,7 @@ docs/
 
 ## Próximas Fases
 
-- **Fase 2:** Análise completa paga + contrato corrigido (.docx/.pdf) + Mercado Pago
+- **Fase 2:** Análise completa paga + Mercado Pago (correção já implementada na beta)
 - **Fase 3:** Tipos especializados + biblioteca de modelos + blog SEO + auth
 - **Fase 4:** API pública + testes A/B + otimização de custos
 
