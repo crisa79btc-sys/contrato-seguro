@@ -6,7 +6,7 @@ export async function POST(
   _request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const contract = store.getContract(params.id);
+  const contract = await store.getContract(params.id);
 
   if (!contract) {
     return NextResponse.json(
@@ -28,12 +28,12 @@ export async function POST(
   }
 
   // Disparar correção em background
-  store.updateContract(params.id, { status: 'correcting' });
+  await store.updateContract(params.id, { status: 'correcting' });
 
-  processCorrection(params.id).catch((err) => {
+  processCorrection(params.id).catch(async (err) => {
     console.error(`Erro na correção do contrato ${params.id}:`, err);
-    store.updateContract(params.id, {
-      status: 'analyzed', // Volta para analyzed em caso de erro
+    await store.updateContract(params.id, {
+      status: 'analyzed',
       error_message: `Erro na correção: ${err instanceof Error ? err.message : 'Erro desconhecido'}`,
     });
   });
@@ -42,7 +42,7 @@ export async function POST(
 }
 
 async function processCorrection(contractId: string) {
-  const contract = store.getContract(contractId);
+  const contract = await store.getContract(contractId);
   if (!contract) throw new Error('Contrato não encontrado');
 
   console.log(`[Correção] Iniciando correção do contrato ${contractId}...`);
@@ -56,7 +56,7 @@ async function processCorrection(contractId: string) {
   const elapsed = Math.round((Date.now() - start) / 1000);
   console.log(`[Correção] Contrato ${contractId} corrigido em ${elapsed}s (${usage.tokensOutput} tokens)`);
 
-  store.updateContract(contractId, {
+  await store.updateContract(contractId, {
     status: 'corrected',
     correction_result: {
       ...correction,

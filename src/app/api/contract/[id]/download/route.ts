@@ -18,7 +18,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const contract = store.getContract(params.id);
+  const contract = await store.getContract(params.id);
 
   if (!contract) {
     return NextResponse.json(

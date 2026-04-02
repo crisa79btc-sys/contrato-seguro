@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
     // Gerar ID e salvar no store
     const contractId = randomUUID();
 
-    store.createContract({
+    await store.createContract({
       id: contractId,
       original_text: text,
       original_filename: file.name,
@@ -104,9 +104,9 @@ export async function POST(request: NextRequest) {
     });
 
     // Disparar análise em background (não bloqueia o response)
-    processContract(contractId).catch((err) => {
+    processContract(contractId).catch(async (err) => {
       console.error(`Erro inesperado no contrato ${contractId}:`, err);
-      store.updateContract(contractId, {
+      await store.updateContract(contractId, {
         status: 'error',
         error_message: 'Erro inesperado ao processar o contrato. Tente novamente.',
       });
@@ -135,34 +135,34 @@ export async function POST(request: NextRequest) {
  * Processa o contrato em background: classifica + analisa.
  */
 async function processContract(contractId: string) {
-  const contract = store.getContract(contractId);
+  const contract = await store.getContract(contractId);
   if (!contract) throw new Error('Contrato não encontrado');
 
   // Etapa 1: Classificação
-  store.updateContract(contractId, { status: 'classifying' });
+  await store.updateContract(contractId, { status: 'classifying' });
 
   try {
     const { classification } = await classifyContract(contract.original_text);
-    store.updateContract(contractId, {
+    await store.updateContract(contractId, {
       status: 'classified',
       contract_type: classification.type,
       classification_result: classification,
     });
   } catch (err) {
     console.error(`Erro na classificação do contrato ${contractId}:`, err);
-    store.updateContract(contractId, {
+    await store.updateContract(contractId, {
       status: 'classified',
       contract_type: 'outro',
     });
   }
 
   // Etapa 2: Análise gratuita
-  store.updateContract(contractId, { status: 'analyzing' });
+  await store.updateContract(contractId, { status: 'analyzing' });
 
   try {
     const { analysis, usage } = await analyzeContract(contract.original_text, 'free');
 
-    store.updateContract(contractId, {
+    await store.updateContract(contractId, {
       status: 'analyzed',
       analysis_result: {
         ...analysis,
@@ -173,7 +173,7 @@ async function processContract(contractId: string) {
     const message =
       err instanceof Error ? err.message : 'Erro desconhecido na análise';
     console.error(`Erro na análise do contrato ${contractId}:`, err);
-    store.updateContract(contractId, {
+    await store.updateContract(contractId, {
       status: 'error',
       error_message: `Erro na análise: ${message}`,
     });

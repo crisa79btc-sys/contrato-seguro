@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { store } from '../store';
 
 describe('store', () => {
-  it('cria e recupera um contrato', () => {
-    const contract = store.createContract({
+  it('cria e recupera um contrato', async () => {
+    const contract = await store.createContract({
       id: 'test-1',
       original_text: 'Contrato de teste',
       original_filename: 'contrato.pdf',
@@ -15,17 +15,17 @@ describe('store', () => {
     expect(contract.status).toBe('uploaded');
     expect(contract.contract_type).toBeNull();
 
-    const retrieved = store.getContract('test-1');
+    const retrieved = await store.getContract('test-1');
     expect(retrieved).toEqual(contract);
   });
 
-  it('retorna undefined para id inexistente', () => {
-    const result = store.getContract('nao-existe');
+  it('retorna undefined para id inexistente', async () => {
+    const result = await store.getContract('nao-existe');
     expect(result).toBeUndefined();
   });
 
-  it('atualiza campos do contrato', () => {
-    store.createContract({
+  it('atualiza campos do contrato', async () => {
+    await store.createContract({
       id: 'test-2',
       original_text: 'Texto',
       original_filename: 'teste.pdf',
@@ -33,7 +33,7 @@ describe('store', () => {
       page_count: 1,
     });
 
-    const updated = store.updateContract('test-2', {
+    const updated = await store.updateContract('test-2', {
       status: 'analyzed',
       contract_type: 'aluguel',
     });
@@ -43,8 +43,8 @@ describe('store', () => {
     expect(updated?.original_filename).toBe('teste.pdf');
   });
 
-  it('retorna undefined ao atualizar id inexistente', () => {
-    const result = store.updateContract('nao-existe', { status: 'error' });
+  it('retorna undefined ao atualizar id inexistente', async () => {
+    const result = await store.updateContract('nao-existe', { status: 'error' });
     expect(result).toBeUndefined();
   });
 });
