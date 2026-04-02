@@ -3,6 +3,7 @@ import { store } from '@/lib/store';
 import { generateCorrectedDocx } from '@/lib/export/docx-corrected';
 import { generateCorrectedPdf } from '@/lib/export/pdf-corrected';
 import { correctionOutputSchema } from '@/schemas/ai-output.schema';
+import { isBillingEnabled } from '@/config/constants';
 
 const TYPE_LABELS: Record<string, string> = {
   aluguel: 'Contrato de Aluguel',
@@ -27,7 +28,22 @@ export async function GET(
     );
   }
 
-  if (contract.status !== 'corrected' || !contract.correction_result) {
+  // Gate de pagamento: quando billing ativo, exige status 'paid'
+  if (isBillingEnabled() && contract.status !== 'paid') {
+    return NextResponse.json(
+      { error: 'Pagamento necessário para baixar o contrato corrigido.', code: 'PAYMENT_REQUIRED' },
+      { status: 402 }
+    );
+  }
+
+  if (!isBillingEnabled() && contract.status !== 'corrected' && contract.status !== 'paid') {
+    return NextResponse.json(
+      { error: 'O contrato ainda não foi corrigido.', code: 'NOT_CORRECTED' },
+      { status: 400 }
+    );
+  }
+
+  if (!contract.correction_result) {
     return NextResponse.json(
       { error: 'O contrato ainda não foi corrigido.', code: 'NOT_CORRECTED' },
       { status: 400 }

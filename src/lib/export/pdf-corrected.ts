@@ -9,30 +9,41 @@ type PdfData = {
 
 /**
  * Gera PDF contendo APENAS o contrato corrigido limpo.
- * Formatação profissional: negrito em títulos, espaçamento correto, numeração de páginas.
+ * Formatação formal: Times (serif) 12pt, texto justificado, espaçamento 1.5,
+ * margens 3cm/2cm, recuo de parágrafo 1,25cm, numeração de páginas.
  */
 export async function generateCorrectedPdf(data: PdfData): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
-  const font = await doc.embedFont(StandardFonts.Helvetica);
-  const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
-  const fontItalic = await doc.embedFont(StandardFonts.HelveticaOblique);
+  const font = await doc.embedFont(StandardFonts.TimesRoman);
+  const fontBold = await doc.embedFont(StandardFonts.TimesRomanBold);
+  const fontItalic = await doc.embedFont(StandardFonts.TimesRomanItalic);
 
+  // A4 em pontos (595 x 842)
   const pageWidth = 595;
   const pageHeight = 842;
-  const marginTop = 70;
-  const marginBottom = 60;
-  const marginLeft = 65;
-  const marginRight = 65;
+  // Margens formais: 3cm superior/esquerda, 2cm inferior/direita
+  // 1cm ≈ 28.35pt
+  const marginTop = 85;     // ~3cm
+  const marginBottom = 57;   // ~2cm
+  const marginLeft = 85;     // ~3cm
+  const marginRight = 57;    // ~2cm
   const contentWidth = pageWidth - marginLeft - marginRight;
+  const firstLineIndent = 35.4; // ~1,25cm recuo de parágrafo
+
+  const fontSize = 12;
+  const fontSizeTitle = 14;
+  const fontSizeSection = 13;
+  const fontSizeSmall = 9;
+  const lineHeight = 18; // ~1.5 entrelinhas para 12pt
 
   const pages: ReturnType<typeof doc.addPage>[] = [];
   let page = doc.addPage([pageWidth, pageHeight]);
   pages.push(page);
   let y = pageHeight - marginTop;
 
-  const black = rgb(0.1, 0.1, 0.1);
-  const darkGray = rgb(0.25, 0.25, 0.25);
-  const lightGray = rgb(0.6, 0.6, 0.6);
+  const black = rgb(0.05, 0.05, 0.05);
+  const darkGray = rgb(0.15, 0.15, 0.15);
+  const lightGray = rgb(0.55, 0.55, 0.55);
 
   function newPage() {
     page = doc.addPage([pageWidth, pageHeight]);
@@ -46,37 +57,88 @@ export async function generateCorrectedPdf(data: PdfData): Promise<Uint8Array> {
     }
   }
 
+  // Desenha texto justificado: distribui espaço entre palavras para preencher a largura
+  function drawJustifiedLine(words: string[], x: number, maxW: number, sz: number, f: typeof font, c: typeof black) {
+    if (words.length <= 1) {
+      page.drawText(words.join(''), { x, y, size: sz, font: f, color: c });
+      return;
+    }
+    const textWidth = words.reduce((sum, w) => sum + f.widthOfTextAtSize(w, sz), 0);
+    const totalSpace = maxW - textWidth;
+    const spacePerGap = totalSpace / (words.length - 1);
+
+    let cx = x;
+    for (let i = 0; i < words.length; i++) {
+      page.drawText(words[i], { x: cx, y, size: sz, font: f, color: c });
+      cx += f.widthOfTextAtSize(words[i], sz) + spacePerGap;
+    }
+  }
+
   function drawWrapped(text: string, opts: {
     size?: number;
     font?: typeof font;
     color?: typeof black;
     indent?: number;
-    lineHeight?: number;
+    lh?: number;
+    justify?: boolean;
+    center?: boolean;
+    firstIndent?: number;
   }) {
-    const sz = opts.size || 10;
+    const sz = opts.size || fontSize;
     const f = opts.font || font;
     const c = opts.color || darkGray;
     const indent = opts.indent || 0;
-    const lh = opts.lineHeight || sz + 4;
+    const lh = opts.lh || lineHeight;
+    const justify = opts.justify ?? false;
+    const center = opts.center ?? false;
+    const fi = opts.firstIndent || 0;
+
     const x = marginLeft + indent;
     const maxW = contentWidth - indent;
+    let isFirstLine = true;
 
     const words = text.split(' ');
-    let line = '';
+    let lineWords: string[] = [];
+    let lineTextWidth = 0;
+
     for (const word of words) {
-      const test = line ? `${line} ${word}` : word;
-      if (f.widthOfTextAtSize(test, sz) > maxW && line) {
+      const wordW = f.widthOfTextAtSize(word, sz);
+      const spaceW = lineWords.length > 0 ? f.widthOfTextAtSize(' ', sz) : 0;
+      const currentIndent = isFirstLine ? fi : 0;
+      const availW = maxW - currentIndent;
+
+      if (lineWords.length > 0 && lineTextWidth + spaceW + wordW > availW) {
         checkPage(lh + 5);
-        page.drawText(line, { x, y, size: sz, font: f, color: c });
+        const lx = x + currentIndent;
+        if (justify) {
+          drawJustifiedLine(lineWords, lx, availW, sz, f, c);
+        } else if (center) {
+          const tw = f.widthOfTextAtSize(lineWords.join(' '), sz);
+          page.drawText(lineWords.join(' '), { x: marginLeft + (contentWidth - tw) / 2, y, size: sz, font: f, color: c });
+        } else {
+          page.drawText(lineWords.join(' '), { x: lx, y, size: sz, font: f, color: c });
+        }
         y -= lh;
-        line = word;
+        isFirstLine = false;
+        lineWords = [word];
+        lineTextWidth = wordW;
       } else {
-        line = test;
+        lineTextWidth += spaceW + wordW;
+        lineWords.push(word);
       }
     }
-    if (line) {
+    // Última linha — nunca justifica (padrão tipográfico)
+    if (lineWords.length > 0) {
       checkPage(lh + 5);
-      page.drawText(line, { x, y, size: sz, font: f, color: c });
+      const currentIndent = isFirstLine ? fi : 0;
+      const lx = x + currentIndent;
+      const lineText = lineWords.join(' ');
+      if (center) {
+        const tw = f.widthOfTextAtSize(lineText, sz);
+        page.drawText(lineText, { x: marginLeft + (contentWidth - tw) / 2, y, size: sz, font: f, color: c });
+      } else {
+        page.drawText(lineText, { x: lx, y, size: sz, font: f, color: c });
+      }
       y -= lh;
     }
   }
@@ -90,52 +152,74 @@ export async function generateCorrectedPdf(data: PdfData): Promise<Uint8Array> {
   for (const line of lines) {
     const trimmed = line.trim();
 
-    // Linha vazia = espaço entre parágrafos
     if (!trimmed) {
-      y -= 10;
+      y -= 8;
       continue;
     }
 
-    // Título principal do contrato (ex: "CONTRATO DE COMPRA E VENDA DE VEÍCULO")
+    // Título principal do contrato (ex: "CONTRATO DE LOCAÇÃO DE IMÓVEL RESIDENCIAL")
     const isTitleMain = /^CONTRATO\s/i.test(trimmed) && trimmed === trimmed.toUpperCase() && trimmed.length < 80;
 
-    // Seções (ex: "DO OBJETO DO CONTRATO", "DA GARANTIA", "DO FORO")
-    const isSection = /^(DAS?\s|DOS?\s|CONDI[CÇ][OÕ]ES|DISPOSI[CÇ][OÕ]ES|TESTEMUNHAS)/i.test(trimmed)
-      && trimmed.length < 60;
+    // Seções em caixa alta (ex: "CLÁUSULAS CONTRATUAIS", "DO OBJETO", "TESTEMUNHAS:")
+    const isSection = (
+      /^(DAS?\s|DOS?\s|CONDI[CÇ][OÕ]ES|DISPOSI[CÇ][OÕ]ES|TESTEMUNHAS|CL[AÁ]USULAS\s)/i.test(trimmed)
+      && trimmed.length < 60
+    ) || (
+      trimmed === trimmed.toUpperCase() && trimmed.length > 3 && trimmed.length < 60
+      && !/^\d/.test(trimmed) && !/^_{3,}/.test(trimmed) && !isTitleMain
+    );
 
-    // Cláusulas (ex: "Cláusula 1ª.", "Cláusula 8-A.")
-    const isClause = /^CL[AÁ]USULA\s/i.test(trimmed);
+    // Cláusulas numeradas por ordinal (ex: "PRIMEIRA – DO IMÓVEL:", "DÉCIMA SEGUNDA – DAS BENFEITORIAS:")
+    // ou por número (ex: "Cláusula 1ª.", "CLÁUSULA PRIMEIRA")
+    const isClause = /^CL[AÁ]USULA\s/i.test(trimmed)
+      || /^(PRIMEIRA|SEGUNDA|TERCEIRA|QUARTA|QUINTA|SEXTA|S[EÉ]TIMA|OITAVA|NONA|D[EÉ]CIMA|VIG[EÉ]SIMA|TRIG[EÉ]SIMA|QUADRAG[EÉ]SIMA|QUINQUAG[EÉ]SIMA)\b/i.test(trimmed);
 
-    // Parágrafos (§1º, §2º, Parágrafo único)
+    // Parágrafos jurídicos (§1º, Parágrafo único)
     const isParagraph = /^(§\d|Par[aá]grafo)/i.test(trimmed);
 
-    // Incisos (I., II., III., etc.)
-    const isInciso = /^[IVX]+\.\s/.test(trimmed) || /^[a-z]\)\s/.test(trimmed);
+    // Incisos (I., II., I –, a), b))
+    const isInciso = /^[IVX]+[\.\s]\s*[–\-]?\s/.test(trimmed) || /^[a-z]\)\s/.test(trimmed);
+
+    // Assinaturas, campos para preencher, local/data
+    const isSignatureLine = /^_{5,}/.test(trimmed) || /^Assinatura:/i.test(trimmed)
+      || /^(Nome|CPF|RG)\s*:/i.test(trimmed)
+      || /^.{1,50},\s*_{2,}.*de\s+\d{4}/.test(trimmed); // "Aracruz-ES, _____ de ..."
+
+    // Bloco de identificação sob assinatura (nome da parte, "LOCADORA", "LOCATÁRIO", "CPF xxx")
+    const isSignatureBlock = /^(LOCAT[AÁ]RI[OA]|LOCADORA|CPF\s+\d)/.test(trimmed)
+      || /^TESTEMUNHAS:?\s*$/i.test(trimmed);
 
     if (isTitleMain) {
       y -= 10;
       checkPage(30);
-      drawWrapped(trimmed, { size: 14, font: fontBold, color: black, lineHeight: 20 });
-      y -= 12;
-    } else if (isSection) {
+      drawWrapped(trimmed, { size: fontSizeTitle, font: fontBold, color: black, lh: 22, center: true });
       y -= 14;
+    } else if (isSection) {
+      y -= 16;
       checkPage(25);
-      drawWrapped(trimmed, { size: 11, font: fontBold, color: black, lineHeight: 16 });
-      y -= 4;
+      drawWrapped(trimmed, { size: fontSizeSection, font: fontBold, color: black, lh: 20, center: true });
+      y -= 6;
     } else if (isClause) {
       y -= 8;
       checkPage(20);
-      drawWrapped(trimmed, { size: 10, font: fontBold, color: darkGray, lineHeight: 14.5 });
+      drawWrapped(trimmed, { size: fontSize, font: fontBold, color: darkGray, justify: true, firstIndent: firstLineIndent });
       y -= 2;
     } else if (isParagraph) {
-      checkPage(15);
-      drawWrapped(trimmed, { size: 9.5, font: font, color: darkGray, indent: 15, lineHeight: 13.5 });
+      checkPage(18);
+      drawWrapped(trimmed, { size: fontSize, color: darkGray, justify: true, firstIndent: firstLineIndent });
     } else if (isInciso) {
-      checkPage(15);
-      drawWrapped(trimmed, { size: 9.5, font: font, color: darkGray, indent: 25, lineHeight: 13.5 });
+      checkPage(18);
+      drawWrapped(trimmed, { size: fontSize, color: darkGray, justify: true, indent: firstLineIndent });
+    } else if (isSignatureLine) {
+      y -= 10;
+      checkPage(20);
+      drawWrapped(trimmed, { size: fontSize, color: darkGray, center: true });
+    } else if (isSignatureBlock) {
+      checkPage(18);
+      drawWrapped(trimmed, { size: fontSize, color: darkGray, center: true });
     } else {
-      checkPage(15);
-      drawWrapped(trimmed, { size: 10, font: font, color: darkGray, lineHeight: 14 });
+      checkPage(18);
+      drawWrapped(trimmed, { size: fontSize, color: darkGray, justify: true, firstIndent: firstLineIndent });
     }
   }
 
@@ -146,12 +230,12 @@ export async function generateCorrectedPdf(data: PdfData): Promise<Uint8Array> {
     start: { x: marginLeft, y },
     end: { x: pageWidth - marginRight, y },
     thickness: 0.5,
-    color: rgb(0.85, 0.85, 0.85),
+    color: rgb(0.8, 0.8, 0.8),
   });
-  y -= 10;
+  y -= 12;
   drawWrapped(
-    'Documento gerado por ContratoSeguro. Recomenda-se revisao por advogado antes da assinatura.',
-    { size: 7, font: fontItalic, color: lightGray }
+    'Documento gerado por ContratoSeguro. Recomenda-se revisão por advogado antes da assinatura.',
+    { size: fontSizeSmall, font: fontItalic, color: lightGray, center: true }
   );
 
   // Numeração de páginas
@@ -159,11 +243,11 @@ export async function generateCorrectedPdf(data: PdfData): Promise<Uint8Array> {
   for (let i = 0; i < totalPages; i++) {
     const p = pages[i];
     const text = `${i + 1} / ${totalPages}`;
-    const textWidth = font.widthOfTextAtSize(text, 8);
+    const textWidth = font.widthOfTextAtSize(text, 9);
     p.drawText(text, {
       x: (pageWidth - textWidth) / 2,
       y: 30,
-      size: 8,
+      size: 9,
       font,
       color: lightGray,
     });

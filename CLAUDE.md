@@ -48,10 +48,17 @@ src/
     page.tsx                        # Landing page com upload
     layout.tsx                      # Layout global (pt-BR, metadata SEO)
     analise/[id]/page.tsx           # Resultado da análise (polling + exibição)
+    analise/[id]/layout.tsx         # Metadata OG dinâmica para compartilhamento
+    analise/[id]/opengraph-image.tsx # Imagem OG gerada para previews sociais
+    sitemap.ts                      # Sitemap XML para Google
+    robots.ts                       # robots.txt para crawlers
+    manifest.ts                     # PWA manifest
     api/
       upload/route.ts               # POST: recebe PDF/JPG/PNG, parseia, dispara análise
       contract/[id]/status/route.ts  # GET: polling do status da análise
       contract/[id]/report/route.ts  # GET: download do relatório em PDF
+      payment/create/route.ts        # POST: cria sessão Mercado Pago (Checkout Pro)
+      payment/webhook/route.ts       # POST: webhook do Mercado Pago (notificação)
   components/
     ui/Header.tsx                   # Header com logo
     ui/Footer.tsx                   # Footer com disclaimer
@@ -71,8 +78,9 @@ src/
     parsers/ocr-vision.ts           # OCR via Claude Vision (imagens e PDFs escaneados)
     parsers/text-cleaner.ts         # Limpeza de texto (paginação, truncamento)
     export/pdf-report.ts            # Geração de relatório PDF da análise
-    export/pdf-corrected.ts         # Geração de PDF do contrato corrigido (formatação profissional)
-    export/docx-corrected.ts        # Geração de DOCX do contrato corrigido (Word)
+    export/pdf-corrected.ts         # PDF corrigido (Times 12pt, justificado, margens 3cm/2cm)
+    export/docx-corrected.ts        # DOCX corrigido (Times 12pt, justificado, 1.5 entrelinhas)
+    payment/mercadopago.ts          # Integração Mercado Pago (Checkout Pro, webhook, status)
     db/supabase.ts                  # Client Supabase (lazy, não usado ainda)
     store.ts                        # Store em memória para dev local
     local-history.ts                # Histórico local no localStorage
@@ -113,7 +121,12 @@ docs/
 
 ### Rotas da API de correção
 - `POST /api/contract/[id]/correct` — dispara correção em background, retorna 202
-- `GET /api/contract/[id]/download?format=docx|pdf` — download do contrato corrigido
+- `GET /api/contract/[id]/download?format=docx|pdf` — download do contrato corrigido (gate por pagamento quando BILLING_ENABLED=true)
+
+### Rotas da API de pagamento (Mercado Pago)
+- `POST /api/payment/create` — cria preferência de pagamento (Checkout Pro), retorna paymentUrl
+- `POST /api/payment/webhook` — webhook automático do Mercado Pago (notificação de status)
+- Quando BILLING_ENABLED=false (beta), `/api/payment/create` retorna `{ free: true }` e download é liberado
 
 ## Robustez implementada
 
@@ -127,17 +140,47 @@ docs/
 - Schema Zod da correção tolerante com defaults (campos opcionais não rejeitam)
 - top_issues trunca para 3 em vez de rejeitar quando IA retorna mais
 - Corretor com fallback: reconstrói JSON se corrected_text existe mas campos secundários falham
+- Formatação formal de documentos (Times 12pt, justificado, margens 3cm/2cm, entrelinhas 1.5)
+- Detecção inteligente de cláusulas por ordinal (PRIMEIRA, SEGUNDA, etc.)
+- SEO completo: sitemap, robots.txt, JSON-LD, Open Graph, Twitter Cards, FAQ structured data
+- OG image dinâmica para previews no WhatsApp/Facebook
+- PWA manifest (instalável no celular)
 - 29 testes unitários (Vitest)
 
 ## O que falta para completar a Fase 1
 
+- [x] ~~Deploy na Vercel com variáveis de ambiente~~ (feito: contrato-seguro-inky.vercel.app)
+- [x] ~~Testar fluxo end-to-end com API key real~~ (funcionando no celular)
+- [ ] Cadastrar no Google Search Console + submeter sitemap
 - [ ] Configurar Supabase (aplicar SQL, migrar store → banco real)
-- [ ] Deploy na Vercel com variáveis de ambiente
-- [ ] Testar fluxo end-to-end com API key real
+
+## O que está pronto para a Fase 2
+
+- [x] Tipos de pagamento completos (PaymentProduct, PaymentStatus, etc.)
+- [x] Integração Mercado Pago: criar preferência + consultar pagamento + mapear status
+- [x] API routes: POST /api/payment/create + POST /api/payment/webhook
+- [x] Gate de pagamento no download (402 quando BILLING_ENABLED=true e não pagou)
+- [x] Feature flag BILLING_ENABLED (false=beta grátis, true=cobra no download)
+- [x] Schema SQL com tabela payments + preços em app_config
+- [ ] Criar conta Mercado Pago + obter ACCESS_TOKEN de produção
+- [ ] Ativar BILLING_ENABLED=true + MERCADOPAGO_ACCESS_TOKEN na Vercel
+- [ ] UI de pagamento no frontend (botão "Pagar R$9,90 para baixar")
+- [ ] Testar fluxo pagamento → webhook → download
+
+## SEO e Divulgação Digital (implementado)
+
+- Sitemap XML: `/sitemap.xml`
+- robots.txt: bloqueia /api/ e /analise/ de indexação
+- PWA manifest: app instalável no celular
+- Open Graph + Twitter Cards: preview rico ao compartilhar
+- JSON-LD: WebApplication + FAQPage (Google Rich Results)
+- 14 keywords estratégicas em pt-BR
+- OG image dinâmica em /analise/[id]
+- Canonical URL configurada
 
 ## Próximas Fases
 
-- **Fase 2:** Análise completa paga + Mercado Pago (correção já implementada na beta)
+- **Fase 2:** Ativar Mercado Pago + cobrar pelo download corrigido (backend pronto, falta UI + conta MP)
 - **Fase 3:** Tipos especializados + biblioteca de modelos + blog SEO + auth
 - **Fase 4:** API pública + testes A/B + otimização de custos
 

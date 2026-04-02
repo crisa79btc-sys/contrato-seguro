@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS public.contracts (
                                 CHECK (status IN (
                                     'uploaded', 'classifying', 'classified',
                                     'analyzing', 'analyzed',
-                                    'correcting', 'corrected', 'error'
+                                    'correcting', 'corrected', 'paid', 'error'
                                 )),
     analysis_result         JSONB,
     classification_result   JSONB,

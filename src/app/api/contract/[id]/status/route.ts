@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { store } from '@/lib/store';
+import { isBillingEnabled } from '@/config/constants';
 
 export async function GET(
   _request: NextRequest,
@@ -18,6 +19,7 @@ export async function GET(
     status: contract.status,
     contractType: contract.contract_type,
     filename: contract.original_filename,
+    billingEnabled: isBillingEnabled(),
   };
 
   if (contract.error_message) {
@@ -28,11 +30,11 @@ export async function GET(
     response.error = contract.error_message;
   }
 
-  if (['analyzed', 'correcting', 'corrected'].includes(contract.status) && contract.analysis_result) {
+  if (['analyzed', 'correcting', 'corrected', 'paid'].includes(contract.status) && contract.analysis_result) {
     response.result = contract.analysis_result;
   }
 
-  if (contract.status === 'corrected' && contract.correction_result) {
+  if (['corrected', 'paid'].includes(contract.status) && contract.correction_result) {
     response.correction = contract.correction_result;
   }
 

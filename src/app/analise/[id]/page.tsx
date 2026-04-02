@@ -38,6 +38,7 @@ type AnalysisData = {
   status: string;
   contractType: string | null;
   filename: string | null;
+  billingEnabled?: boolean;
   error?: string;
   result?: {
     global_score: { value: number; interpretation: string; formula_detail: string };
@@ -59,6 +60,19 @@ export default function AnalisePage({ params }: { params: { id: string } }) {
   const [correcting, setCorrecting] = useState(false);
   const [correctionError, setCorrectionError] = useState<string | null>(null);
   const [polling, setPolling] = useState(true);
+  const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
+  const [paying, setPaying] = useState(false);
+
+  // Detectar retorno do Mercado Pago (?payment=success|failure|pending)
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const payment = urlParams.get('payment');
+    if (payment) {
+      setPaymentStatus(payment);
+      // Limpar query param da URL sem recarregar
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
 
   // Polling único para todos os estados
   useEffect(() => {
@@ -78,6 +92,13 @@ export default function AnalisePage({ params }: { params: { id: string } }) {
         }
         const json = await res.json();
         setData(json);
+
+        // Pagamento confirmado
+        if (json.status === 'paid' && json.correction) {
+          setCorrecting(false);
+          setPolling(false);
+          return;
+        }
 
         // Correção concluída
         if (json.status === 'corrected' && json.correction) {
@@ -120,6 +141,34 @@ export default function AnalisePage({ params }: { params: { id: string } }) {
     };
   }, [polling, correcting, params.id]);
 
+  // Iniciar pagamento via Mercado Pago
+  const handlePayment = async () => {
+    setPaying(true);
+    try {
+      const res = await fetch('/api/payment/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contractId: params.id }),
+      });
+      const json = await res.json();
+
+      if (json.free) {
+        // Beta: download grátis, não precisa pagar
+        return;
+      }
+
+      if (json.paymentUrl) {
+        window.location.href = json.paymentUrl;
+        return;
+      }
+
+      throw new Error(json.error || 'Erro ao iniciar pagamento.');
+    } catch (err) {
+      setPaying(false);
+      alert(err instanceof Error ? err.message : 'Erro ao processar pagamento.');
+    }
+  };
+
   const handleCorrect = async () => {
     setCorrecting(true);
     setCorrectionError(null);
@@ -155,9 +204,12 @@ export default function AnalisePage({ params }: { params: { id: string } }) {
     !notFound &&
     ['uploaded', 'classifying', 'classified', 'analyzing'].includes(data.status);
 
-  const isComplete = ['analyzed', 'correcting', 'corrected'].includes(data?.status || '') && data?.result;
+  const isComplete = ['analyzed', 'correcting', 'corrected', 'paid'].includes(data?.status || '') && data?.result;
   const isError = data?.status === 'error' || notFound;
-  const hasCorrectionResult = data?.status === 'corrected' && data?.correction;
+  const hasCorrectionResult = ['corrected', 'paid'].includes(data?.status || '') && data?.correction;
+  const isPaid = data?.status === 'paid';
+  const billingEnabled = data?.billingEnabled ?? false;
+  const canDownloadFree = !billingEnabled || isPaid;
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -325,11 +377,31 @@ export default function AnalisePage({ params }: { params: { id: string } }) {
                 </div>
               )}
 
+              {/* Aviso de retorno de pagamento */}
+              {paymentStatus === 'success' && !isPaid && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-center">
+                  <p className="text-sm font-medium text-amber-800">
+                    Pagamento em processamento. O download será liberado em instantes...
+                  </p>
+                </div>
+              )}
+              {paymentStatus === 'failure' && (
+                <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-center">
+                  <p className="text-sm font-medium text-red-800">
+                    Pagamento não concluído. Tente novamente.
+                  </p>
+                </div>
+              )}
+
               {/* Resultado da correção */}
               {hasCorrectionResult && data.correction && (
                 <CorrectionResult
                   correction={data.correction}
                   contractId={params.id}
+                  canDownloadFree={canDownloadFree}
+                  billingEnabled={billingEnabled}
+                  onPayment={handlePayment}
+                  paying={paying}
                 />
               )}
 
@@ -386,7 +458,14 @@ const ACTION_LABELS: Record<string, string> = {
   simplified: 'Simplificada',
 };
 
-function CorrectionResult({ correction, contractId }: { correction: CorrectionData; contractId: string }) {
+function CorrectionResult({ correction, contractId, canDownloadFree, billingEnabled, onPayment, paying }: {
+  correction: CorrectionData;
+  contractId: string;
+  canDownloadFree: boolean;
+  billingEnabled: boolean;
+  onPayment: () => void;
+  paying: boolean;
+}) {
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -472,31 +551,70 @@ function CorrectionResult({ correction, contractId }: { correction: CorrectionDa
         </div>
       )}
 
-      {/* Botões de download */}
+      {/* Botões de download ou pagamento */}
       <div className="space-y-3">
-        <h3 className="text-center text-sm font-semibold text-gray-900">Baixar contrato corrigido</h3>
-        <div className="flex flex-col sm:flex-row justify-center gap-3">
-          <a
-            href={`/api/contract/${contractId}/download?format=docx`}
-            download
-            className="flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-600/25 transition-all hover:bg-brand-700 hover:shadow-xl active:scale-95"
-          >
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-            </svg>
-            Word (.docx)
-          </a>
-          <a
-            href={`/api/contract/${contractId}/download?format=pdf`}
-            download
-            className="flex items-center justify-center gap-2 rounded-xl border-2 border-brand-600 px-6 py-3 text-sm font-semibold text-brand-600 transition-all hover:bg-brand-50 active:scale-95"
-          >
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m.75 12 3 3m0 0 3-3m-3 3v-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-            </svg>
-            PDF (.pdf)
-          </a>
-        </div>
+        <h3 className="text-center text-sm font-semibold text-gray-900">
+          {canDownloadFree ? 'Baixar contrato corrigido' : 'Baixar contrato corrigido'}
+        </h3>
+
+        {canDownloadFree ? (
+          /* Download liberado (beta grátis ou já pagou) */
+          <div className="flex flex-col sm:flex-row justify-center gap-3">
+            <a
+              href={`/api/contract/${contractId}/download?format=docx`}
+              download
+              className="flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-600/25 transition-all hover:bg-brand-700 hover:shadow-xl active:scale-95"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+              </svg>
+              Word (.docx)
+            </a>
+            <a
+              href={`/api/contract/${contractId}/download?format=pdf`}
+              download
+              className="flex items-center justify-center gap-2 rounded-xl border-2 border-brand-600 px-6 py-3 text-sm font-semibold text-brand-600 transition-all hover:bg-brand-50 active:scale-95"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m.75 12 3 3m0 0 3-3m-3 3v-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+              </svg>
+              PDF (.pdf)
+            </a>
+          </div>
+        ) : (
+          /* Pagamento necessário */
+          <div className="flex flex-col items-center gap-3">
+            <p className="text-sm text-gray-600 text-center">
+              Para baixar o contrato corrigido em Word ou PDF, efetue o pagamento abaixo.
+            </p>
+            <button
+              onClick={onPayment}
+              disabled={paying}
+              className={`flex items-center justify-center gap-2 rounded-xl px-8 py-3.5 text-sm font-semibold text-white transition-all ${
+                paying
+                  ? 'bg-brand-400 cursor-wait'
+                  : 'bg-brand-600 hover:bg-brand-700 active:scale-95 shadow-lg shadow-brand-600/25 hover:shadow-xl'
+              }`}
+            >
+              {paying ? (
+                <span className="flex items-center gap-2">
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                  Redirecionando...
+                </span>
+              ) : (
+                <>
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Z" />
+                  </svg>
+                  Baixar contrato corrigido — R$ 9,90
+                </>
+              )}
+            </button>
+            <p className="text-xs text-gray-400">
+              Pagamento seguro via Mercado Pago. A análise continua gratuita.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
