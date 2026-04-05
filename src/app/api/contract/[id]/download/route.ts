@@ -3,6 +3,8 @@ import { store } from '@/lib/store';
 import { generateCorrectedDocx } from '@/lib/export/docx-corrected';
 import { generateCorrectedPdf } from '@/lib/export/pdf-corrected';
 import { correctionOutputSchema } from '@/schemas/ai-output.schema';
+
+export const dynamic = 'force-dynamic';
 import { isBillingEnabled } from '@/config/constants';
 
 const TYPE_LABELS: Record<string, string> = {

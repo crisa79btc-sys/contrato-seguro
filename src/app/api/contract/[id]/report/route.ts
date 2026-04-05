@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { store } from '@/lib/store';
 import { generateAnalysisReport } from '@/lib/export/pdf-report';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: { id: string } }

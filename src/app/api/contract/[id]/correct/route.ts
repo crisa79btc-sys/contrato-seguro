@@ -3,6 +3,8 @@ import { waitUntil } from '@vercel/functions';
 import { store } from '@/lib/store';
 import { correctContract } from '@/lib/ai/corrector';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(
   _request: NextRequest,
   { params }: { params: { id: string } }

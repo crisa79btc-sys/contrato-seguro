@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { store } from '@/lib/store';
 import { isBillingEnabled } from '@/config/constants';
 
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: { id: string } }
@@ -38,5 +41,11 @@ export async function GET(
     response.correction = contract.correction_result;
   }
 
-  return NextResponse.json(response);
+  return NextResponse.json(response, {
+    headers: {
+      'Cache-Control': 'no-store, no-cache, must-revalidate',
+      'CDN-Cache-Control': 'no-store',
+      'Vercel-CDN-Cache-Control': 'no-store',
+    },
+  });
 }
