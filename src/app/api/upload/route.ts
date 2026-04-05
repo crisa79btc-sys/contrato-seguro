@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
+import { waitUntil } from '@vercel/functions';
 import { uploadFileSchema } from '@/schemas/upload.schema';
 import { parsePdf } from '@/lib/parsers/pdf';
 import { extractTextFromImage } from '@/lib/parsers/ocr-vision';
@@ -103,14 +104,15 @@ export async function POST(request: NextRequest) {
       page_count: pageCount,
     });
 
-    // Disparar análise em background (não bloqueia o response)
-    processContract(contractId).catch(async (err) => {
+    // Disparar análise em background (waitUntil garante que Vercel não mata o processo)
+    const backgroundTask = processContract(contractId).catch(async (err) => {
       console.error(`Erro inesperado no contrato ${contractId}:`, err);
       await store.updateContract(contractId, {
         status: 'error',
         error_message: 'Erro inesperado ao processar o contrato. Tente novamente.',
       });
     });
+    waitUntil(backgroundTask);
 
     return NextResponse.json(
       {

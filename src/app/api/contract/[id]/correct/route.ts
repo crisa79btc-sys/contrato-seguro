@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { waitUntil } from '@vercel/functions';
 import { store } from '@/lib/store';
 import { correctContract } from '@/lib/ai/corrector';
 
@@ -30,13 +31,14 @@ export async function POST(
   // Disparar correção em background
   await store.updateContract(params.id, { status: 'correcting' });
 
-  processCorrection(params.id).catch(async (err) => {
+  const backgroundTask = processCorrection(params.id).catch(async (err) => {
     console.error(`Erro na correção do contrato ${params.id}:`, err);
     await store.updateContract(params.id, {
       status: 'analyzed',
       error_message: `Erro na correção: ${err instanceof Error ? err.message : 'Erro desconhecido'}`,
     });
   });
+  waitUntil(backgroundTask);
 
   return NextResponse.json({ status: 'correcting' }, { status: 202 });
 }
