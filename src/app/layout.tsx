@@ -1,4 +1,6 @@
 import type { Metadata, Viewport } from 'next';
+import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 import './globals.css';
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://contrato-seguro-inky.vercel.app';
@@ -167,7 +169,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <JsonLd />
         <FaqJsonLd />
       </head>
-      <body className="min-h-screen bg-white font-sans text-gray-900 antialiased">{children}</body>
+      <body className="min-h-screen bg-white font-sans text-gray-900 antialiased">
+        {children}
+        <Analytics />
+        <SpeedInsights />
+      </body>
     </html>
   );
 }

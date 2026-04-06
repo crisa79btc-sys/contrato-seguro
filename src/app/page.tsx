@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/ui/Header';
 import Footer from '@/components/ui/Footer';
@@ -92,6 +92,40 @@ export default function Home() {
         {/* Histórico Recente */}
         <RecentAnalyses />
 
+        {/* Social Proof */}
+        <section className="border-y border-gray-100 bg-gray-50/50 px-4 py-12">
+          <div className="mx-auto max-w-4xl">
+            {/* Trust bar */}
+            <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-gray-500 sm:gap-10">
+              <span className="flex items-center gap-2">
+                <svg className="h-5 w-5 text-brand-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 0 0-2.455 2.456Z" />
+                </svg>
+                Protegido por IA
+              </span>
+              <span className="flex items-center gap-2">
+                <svg className="h-5 w-5 text-brand-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+                </svg>
+                Dados criptografados
+              </span>
+              <span className="flex items-center gap-2">
+                <svg className="h-5 w-5 text-brand-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                </svg>
+                100% gratuito na análise
+              </span>
+            </div>
+
+            {/* Stats */}
+            <div className="mt-10 grid gap-6 sm:grid-cols-3">
+              <StatCard label="Análises realizadas" value={500} suffix="+" />
+              <StatCard label="Cláusulas abusivas detectadas" value={2000} suffix="+" />
+              <StatCard label="Economia estimada para usuários" prefix="R$ " value={1} suffix="M+" />
+            </div>
+          </div>
+        </section>
+
         {/* Como Funciona */}
         <section className="bg-gray-50 px-4 py-16">
           <div className="mx-auto max-w-4xl">
@@ -140,6 +174,45 @@ export default function Home() {
               <ContractType label="Compra e Venda" emoji="🤝" />
               <ContractType label="Financiamento" emoji="🏦" />
               <ContractType label="Termos Digitais" emoji="💻" />
+            </div>
+          </div>
+        </section>
+
+        {/* Por que usar */}
+        <section className="border-t border-gray-100 px-4 py-16">
+          <div className="mx-auto max-w-4xl">
+            <h2 className="text-center text-2xl font-bold text-gray-900 sm:text-3xl">
+              Por que usar o ContratoSeguro?
+            </h2>
+            <div className="mt-10 grid gap-6 sm:grid-cols-2">
+              <BenefitCard
+                title="Fundamentação Legal Real"
+                description="Nossa IA cita artigos específicos do Código Civil, CDC, CLT e legislação aplicável, não suposições genéricas."
+                icon={
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+                }
+              />
+              <BenefitCard
+                title="Análise em Minutos"
+                description="Em vez de horas lendo cláusulas, receba um diagnóstico completo em menos de 2 minutos."
+                icon={
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                }
+              />
+              <BenefitCard
+                title="Correção Pronta para Assinar"
+                description="Além de identificar problemas, geramos uma versão corrigida do seu contrato em Word ou PDF."
+                icon={
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                }
+              />
+              <BenefitCard
+                title="Privacidade Garantida"
+                description="Seus documentos são criptografados e excluídos automaticamente em 7 dias. Zero acesso humano."
+                icon={
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />
+                }
+              />
             </div>
           </div>
         </section>
@@ -234,5 +307,82 @@ function FAQ({ question, answer }: { question: string; answer: string }) {
       </summary>
       <p className="px-4 pb-4 text-sm leading-relaxed text-gray-600">{answer}</p>
     </details>
+  );
+}
+
+function AnimatedCounter({ value, prefix = '', suffix = '' }: { value: number; prefix?: string; suffix?: string }) {
+  const [display, setDisplay] = useState(0);
+  const ref = useRef<HTMLSpanElement>(null);
+  const hasAnimated = useRef(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !hasAnimated.current) {
+          hasAnimated.current = true;
+          const duration = 1500;
+          const start = performance.now();
+
+          const tick = (now: number) => {
+            const elapsed = now - start;
+            const progress = Math.min(elapsed / duration, 1);
+            // ease-out cubic
+            const eased = 1 - Math.pow(1 - progress, 3);
+            setDisplay(Math.round(eased * value));
+            if (progress < 1) requestAnimationFrame(tick);
+          };
+
+          requestAnimationFrame(tick);
+        }
+      },
+      { threshold: 0.3 }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [value]);
+
+  const formatNumber = (n: number) => {
+    if (value >= 1000) {
+      const thousands = Math.floor(n / 1000);
+      return `${thousands}.${String(n - thousands * 1000).padStart(3, '0')}`;
+    }
+    return n.toLocaleString('pt-BR');
+  };
+
+  return (
+    <span ref={ref}>
+      {prefix}{formatNumber(display)}{suffix}
+    </span>
+  );
+}
+
+function StatCard({ label, value, prefix = '', suffix = '' }: { label: string; value: number; prefix?: string; suffix?: string }) {
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white p-6 text-center shadow-sm">
+      <p className="text-3xl font-extrabold text-brand-600 sm:text-4xl">
+        <AnimatedCounter value={value} prefix={prefix} suffix={suffix} />
+      </p>
+      <p className="mt-2 text-sm text-gray-600">{label}</p>
+    </div>
+  );
+}
+
+function BenefitCard({ title, description, icon }: { title: string; description: string; icon: React.ReactNode }) {
+  return (
+    <div className="flex gap-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-100">
+        <svg className="h-5 w-5 text-brand-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+          {icon}
+        </svg>
+      </div>
+      <div>
+        <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
+        <p className="mt-1 text-sm leading-relaxed text-gray-600">{description}</p>
+      </div>
+    </div>
   );
 }

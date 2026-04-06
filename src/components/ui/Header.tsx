@@ -14,6 +14,14 @@ export default function Header() {
             Contrato<span className="text-brand-600">Seguro</span>
           </span>
         </Link>
+        <nav>
+          <Link
+            href="/blog"
+            className="text-sm font-medium text-gray-600 transition-colors hover:text-brand-600"
+          >
+            Blog
+          </Link>
+        </nav>
       </div>
     </header>
   );
