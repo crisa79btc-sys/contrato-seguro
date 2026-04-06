@@ -14,13 +14,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Stack
 
 - **Frontend:** Next.js 14.2 (App Router), TypeScript, Tailwind CSS 3.4
-- **Backend:** Next.js API Routes (processamento async via Promise, futuro: Inngest)
-- **IA:** Claude API (Anthropic) — **Haiku para análise/correção de contratos**, Sonnet/Opus apenas para geração de código
-- **Parsing:** pdf-parse (PDF). Sem OCR no MVP.
-- **Geração Docs:** docx (npm) + pdf-lib (sem Puppeteer) — ainda não implementado
-- **Pagamento:** Mercado Pago — preparado nos tipos, não implementado na beta
-- **Banco:** Store em memória (dev local). Futuro: Supabase (PostgreSQL)
-- **Deploy:** Vercel + Supabase (pendente)
+- **Backend:** Next.js API Routes + `waitUntil()` do `@vercel/functions` para background processing
+- **IA:** Claude API (Anthropic) — **Haiku para análise/correção de contratos e posts sociais**, Sonnet/Opus apenas para geração de código
+- **Parsing:** pdf-parse (PDF) + Claude Vision (OCR para escaneados/imagens)
+- **Geração Docs:** docx (npm) + pdf-lib (sem Puppeteer)
+- **Pagamento:** Mercado Pago — backend pronto, billing desligado na beta
+- **Banco:** Supabase (PostgreSQL) com schema 001 normalizado. Store adapta queries para tabelas separadas.
+- **Social Media:** Meta Graph API (Facebook + Instagram) + Vercel Cron + Claude para conteúdo
+- **Deploy:** Vercel (contrato-seguro-inky.vercel.app) + Supabase (wdsfemqjwgdfrqedvqyh)
 
 ## Modelo de Negócio
 
@@ -57,8 +58,12 @@ src/
       upload/route.ts               # POST: recebe PDF/JPG/PNG, parseia, dispara análise
       contract/[id]/status/route.ts  # GET: polling do status da análise
       contract/[id]/report/route.ts  # GET: download do relatório em PDF
+      contract/[id]/correct/route.ts # POST: dispara correção em background
+      contract/[id]/download/route.ts # GET: download DOCX/PDF corrigido
       payment/create/route.ts        # POST: cria sessão Mercado Pago (Checkout Pro)
       payment/webhook/route.ts       # POST: webhook do Mercado Pago (notificação)
+      cron/social/route.ts           # GET: Vercel Cron — post automático redes sociais
+      social/image/[id]/route.tsx    # GET: gera imagem 1080x1080 para posts (Edge Runtime)
   components/
     ui/Header.tsx                   # Header com logo
     ui/Footer.tsx                   # Footer com disclaimer
@@ -81,8 +86,14 @@ src/
     export/pdf-corrected.ts         # PDF corrigido (Times 12pt, justificado, margens 3cm/2cm)
     export/docx-corrected.ts        # DOCX corrigido (Times 12pt, justificado, 1.5 entrelinhas)
     payment/mercadopago.ts          # Integração Mercado Pago (Checkout Pro, webhook, status)
-    db/supabase.ts                  # Client Supabase (lazy, não usado ainda)
-    store.ts                        # Store em memória para dev local
+    social/types.ts                 # Tipos do módulo de automação social
+    social/topics.ts                # Banco de 30+ temas + rotação automática
+    social/content-generator.ts     # Claude gera posts para redes sociais
+    social/meta-client.ts           # Cliente Meta Graph API (Facebook + Instagram)
+    social/state.ts                 # Estado da automação social (app_config)
+    social/post-orchestrator.ts     # Orquestração: tema → conteúdo → imagem → publicar
+    db/supabase.ts                  # Client Supabase (lazy, admin + public)
+    store.ts                        # Store dual-mode: Supabase (schema 001 normalizado) ou memória (dev)
     local-history.ts                # Histórico local no localStorage
   config/constants.ts               # Constantes, modelos IA, feature flags
   schemas/upload.schema.ts          # Validação Zod do upload
@@ -94,7 +105,8 @@ src/
     index.ts                        # Re-export centralizado
     pdf-parse.d.ts                  # Declaração de tipos para pdf-parse
 docs/
-  database/001_initial_schema.sql   # Migração SQL completa (9 tabelas + RLS)
+  database/001_initial_schema.sql   # Schema ativo no Supabase (9 tabelas + RLS)
+  database/002_beta_simplified.sql  # Schema alternativo (NÃO usado — mantido como referência)
   database/README.md                # Como aplicar migrações
   prompts/system-analyzer.md        # Prompt do analisador (com jurisprudência pacificada)
   prompts/system-classifier.md      # Prompt do classificador
@@ -110,7 +122,7 @@ docs/
 
 1. Usuário faz upload de PDF ou imagem (JPG/PNG/WebP) na landing page
 2. `POST /api/upload` valida (MIME, magic bytes, tamanho), parseia texto (pdf-parse ou Claude Vision para escaneados/imagens), limpa
-3. Contrato salvo no store em memória, análise disparada em background
+3. Contrato salvo no Supabase (ou memória em dev local), análise disparada em background via `waitUntil()`
 4. Classificação do tipo (Haiku, 15s timeout) → Análise gratuita (Haiku, 120s timeout)
 5. Frontend faz polling em `GET /api/contract/[id]/status` a cada 2s
 6. Resultado exibido: score animado + top 3 problemas + total + cards locked
@@ -149,10 +161,11 @@ docs/
 
 ## O que falta para completar a Fase 1
 
-- [x] ~~Deploy na Vercel com variáveis de ambiente~~ (feito: contrato-seguro-inky.vercel.app)
-- [x] ~~Testar fluxo end-to-end com API key real~~ (funcionando no celular)
-- [ ] Cadastrar no Google Search Console + submeter sitemap
-- [ ] Configurar Supabase (aplicar SQL, migrar store → banco real)
+- [x] Deploy na Vercel com variáveis de ambiente (contrato-seguro-inky.vercel.app)
+- [x] Testar fluxo end-to-end com API key real
+- [x] Configurar Supabase (schema 001 aplicado, store adaptado)
+- [x] Google Search Console cadastrado + sitemap submetido
+- [ ] Bing Webmaster Tools (Bing fora do ar em 2026-04-05, tentar depois)
 
 ## O que está pronto para a Fase 2
 
@@ -178,8 +191,34 @@ docs/
 - OG image dinâmica em /analise/[id]
 - Canonical URL configurada
 
+## Automação Social Media (NOVO — implementado, falta configurar Meta)
+
+Sistema de publicação automática em Facebook e Instagram:
+- Vercel Cron diário às 9h BRT (12:00 UTC)
+- Claude Haiku gera conteúdo educativo sobre contratos (~R$0,01/mês)
+- 30+ temas com rotação automática (7 categorias × 5 tipos de post)
+- Imagens 1080×1080 geradas via next/og (Edge Runtime)
+- Meta Graph API v21.0 para publicação
+- Estado persistido no Supabase (app_config)
+- Fallback para posts pré-escritos se Claude falhar
+
+### Variáveis de ambiente necessárias (ainda não configuradas)
+```env
+META_PAGE_ACCESS_TOKEN=    # Token da página Facebook (longa duração)
+META_PAGE_ID=              # ID da página Facebook
+META_IG_USER_ID=           # ID da conta Business Instagram
+CRON_SECRET=               # Gerado automaticamente pelo Vercel
+```
+
+### Setup pendente do usuário
+1. Criar app em developers.facebook.com
+2. Gerar Page Access Token com permissões
+3. Conectar Instagram Business
+4. Configurar variáveis no Vercel
+
 ## Próximas Fases
 
+- **Fase 1.5 (atual):** Configurar Meta Developer + ativar automação social
 - **Fase 2:** Ativar Mercado Pago + cobrar pelo download corrigido (backend pronto, falta UI + conta MP)
 - **Fase 3:** Tipos especializados + biblioteca de modelos + blog SEO + auth
 - **Fase 4:** API pública + testes A/B + otimização de custos

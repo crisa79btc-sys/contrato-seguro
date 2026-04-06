@@ -1,0 +1,54 @@
+/**
+ * Tipos do módulo de automação de redes sociais.
+ */
+
+export type PostCategory =
+  | 'aluguel'
+  | 'trabalho'
+  | 'servico'
+  | 'compra_venda'
+  | 'consumidor'
+  | 'digital'
+  | 'geral';
+
+export type PostType =
+  | 'dica'
+  | 'mito_verdade'
+  | 'checklist'
+  | 'estatistica'
+  | 'pergunta';
+
+export type TopicTemplate = {
+  key: string;
+  category: PostCategory;
+  type: PostType;
+  promptHint: string;
+};
+
+export type GeneratedPost = {
+  text: string;
+  hashtags: string[];
+  imageHeadline: string;
+};
+
+export type PostHistoryEntry = {
+  date: string;
+  topicKey: string;
+  fbPostId?: string;
+  igPostId?: string;
+  error?: string;
+};
+
+export type MetaPostResult = {
+  id: string;
+  success: boolean;
+  error?: string;
+};
+
+export type OrchestratorResult = {
+  success: boolean;
+  topicKey: string;
+  facebook?: MetaPostResult;
+  instagram?: MetaPostResult;
+  error?: string;
+};

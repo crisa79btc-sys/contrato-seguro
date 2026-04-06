@@ -39,6 +39,13 @@ export const AI_MAX_TOKENS = {
 // Feature flags
 export const isBillingEnabled = () => process.env.BILLING_ENABLED === 'true';
 
+// Social Media Automation
+export const SOCIAL_MEDIA = {
+  AI_MODEL: 'claude-haiku-4-5-20251001',
+  MAX_TOKENS: 400,
+  TIMEOUT_MS: 30_000,
+} as const;
+
 // Disclaimer legal
 export const DISCLAIMER_LEGAL =
   'O ContratoSeguro é uma ferramenta de análise automatizada que utiliza inteligência artificial para identificar possíveis riscos em contratos. Esta análise NÃO constitui parecer jurídico, consultoria legal ou aconselhamento profissional. Para decisões importantes, recomendamos consultar um advogado. O ContratoSeguro não se responsabiliza por decisões tomadas com base exclusiva nesta análise.';

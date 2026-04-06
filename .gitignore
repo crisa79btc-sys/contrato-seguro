@@ -42,4 +42,7 @@ next-env.d.ts
 # Claude Code local settings (may contain secrets)
 .claude/settings.local.json
 
-.vercel
+# Asset generation scripts (temp)
+assets/*.py
+
+# Duplicate vercel entry removed

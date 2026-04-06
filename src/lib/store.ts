@@ -109,7 +109,11 @@ export const store = {
         .eq('id', id)
         .single();
 
-      if (error || !c) return undefined;
+      if (error) {
+        console.error('[Store] Erro ao buscar contrato:', error.message);
+        return undefined;
+      }
+      if (!c) return undefined;
 
       // Buscar análise (parties JSONB armazena o resultado completo)
       let analysisResult: unknown = null;
@@ -117,7 +121,7 @@ export const store = {
         .from('analyses')
         .select('parties')
         .eq('contract_id', id)
-        .single();
+        .maybeSingle();
       if (a?.parties) analysisResult = a.parties;
 
       // Buscar correção (changes JSONB armazena o resultado completo)
@@ -126,7 +130,7 @@ export const store = {
         .from('corrected_contracts')
         .select('changes')
         .eq('contract_id', id)
-        .single();
+        .maybeSingle();
       if (cr?.changes) correctionResult = cr.changes;
 
       return {
