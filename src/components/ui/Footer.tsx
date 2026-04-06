@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { DISCLAIMER_LEGAL } from '@/config/constants';
 
 export default function Footer() {
@@ -8,8 +9,15 @@ export default function Footer() {
         <div className="mt-4 flex items-center justify-between text-xs text-gray-400">
           <span>&copy; {new Date().getFullYear()} ContratoSeguro</span>
           <div className="flex gap-4">
-            <span>Privacidade</span>
-            <span>Termos de Uso</span>
+            <Link href="/privacidade" className="transition-colors hover:text-gray-600">
+              Privacidade
+            </Link>
+            <Link href="/termos" className="transition-colors hover:text-gray-600">
+              Termos de Uso
+            </Link>
+            <Link href="/blog" className="transition-colors hover:text-gray-600">
+              Blog
+            </Link>
           </div>
         </div>
       </div>

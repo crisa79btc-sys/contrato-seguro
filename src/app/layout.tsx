@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
+import WhatsAppButton from '@/components/ui/WhatsAppButton';
 import './globals.css';
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://contrato-seguro-inky.vercel.app';
@@ -173,6 +174,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {children}
         <Analytics />
         <SpeedInsights />
+        <WhatsAppButton />
       </body>
     </html>
   );
