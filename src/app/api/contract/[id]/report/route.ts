@@ -18,7 +18,8 @@ export async function GET(
     );
   }
 
-  if (contract.status !== 'analyzed' || !contract.analysis_result) {
+  // Relatório disponível em qualquer status após análise concluída
+  if (!contract.analysis_result) {
     return NextResponse.json(
       { error: 'Análise ainda não concluída.', code: 'NOT_READY' },
       { status: 400 }

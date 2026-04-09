@@ -54,15 +54,6 @@ export default function AdminDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Recuperar sessão
-  useEffect(() => {
-    const saved = sessionStorage.getItem('admin_secret');
-    if (saved) {
-      setSecret(saved);
-      setAuthenticated(true);
-    }
-  }, []);
-
   const fetchData = useCallback(async (s: string) => {
     setLoading(true);
     setError(null);
@@ -89,12 +80,14 @@ export default function AdminDashboard() {
     }
   }, []);
 
-  // Auto-fetch quando autenticado
+  // Recuperar sessão e auto-fetch
   useEffect(() => {
-    if (authenticated && secret) {
-      fetchData(secret);
+    const saved = sessionStorage.getItem('admin_secret');
+    if (saved) {
+      setSecret(saved);
+      fetchData(saved);
     }
-  }, [authenticated, secret, fetchData]);
+  }, [fetchData]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();

@@ -528,6 +528,7 @@ function CorrectionResult({ correction, contractId, canDownloadFree, billingEnab
         <p className="mt-1 text-sm text-green-700">{correction.changes_summary}</p>
 
         {/* Estatísticas */}
+        {correction.stats && (
         <div className="mt-4 flex flex-wrap justify-center gap-2 text-xs">
           <span className="rounded-full bg-white px-3 py-1 font-medium text-green-700 shadow-sm">
             {correction.stats.total_changes} alterações
@@ -548,9 +549,11 @@ function CorrectionResult({ correction, contractId, canDownloadFree, billingEnab
             </span>
           )}
         </div>
+        )}
       </div>
 
       {/* Lista de alterações */}
+      {Array.isArray(correction.changes) && correction.changes.length > 0 && (
       <div className="space-y-3">
         <h3 className="text-sm font-semibold text-gray-900">Alterações realizadas</h3>
         {correction.changes.map((change, i) => (
@@ -575,9 +578,10 @@ function CorrectionResult({ correction, contractId, canDownloadFree, billingEnab
           </div>
         ))}
       </div>
+      )}
 
       {/* Notas jurídicas */}
-      {correction.legal_notes.length > 0 && (
+      {Array.isArray(correction.legal_notes) && correction.legal_notes.length > 0 && (
         <div className="space-y-3">
           <h3 className="text-sm font-semibold text-gray-900">Fundamentação jurídica</h3>
           {correction.legal_notes.map((note, i) => (
