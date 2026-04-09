@@ -103,35 +103,22 @@ export const store = {
 
   async getContract(id: string): Promise<ContractRecord | undefined> {
     if (isSupabaseMode) {
-      const { data: c, error } = await supabase!
-        .from('contracts')
-        .select('*')
-        .eq('id', id)
-        .single();
+      // Todas as 3 queries em paralelo (antes eram sequenciais)
+      const [contractRes, analysisRes, correctionRes] = await Promise.all([
+        supabase!.from('contracts').select('*').eq('id', id).single(),
+        supabase!.from('analyses').select('parties').eq('contract_id', id).maybeSingle(),
+        supabase!.from('corrected_contracts').select('changes').eq('contract_id', id).maybeSingle(),
+      ]);
 
-      if (error) {
-        console.error('[Store] Erro ao buscar contrato:', error.message);
+      if (contractRes.error) {
+        console.error('[Store] Erro ao buscar contrato:', contractRes.error.message);
         return undefined;
       }
+      const c = contractRes.data;
       if (!c) return undefined;
 
-      // Buscar análise (parties JSONB armazena o resultado completo)
-      let analysisResult: unknown = null;
-      const { data: a } = await supabase!
-        .from('analyses')
-        .select('parties')
-        .eq('contract_id', id)
-        .maybeSingle();
-      if (a?.parties) analysisResult = a.parties;
-
-      // Buscar correção (changes JSONB armazena o resultado completo)
-      let correctionResult: unknown = null;
-      const { data: cr } = await supabase!
-        .from('corrected_contracts')
-        .select('changes')
-        .eq('contract_id', id)
-        .maybeSingle();
-      if (cr?.changes) correctionResult = cr.changes;
+      const analysisResult = analysisRes.data?.parties ?? null;
+      const correctionResult = correctionRes.data?.changes ?? null;
 
       return {
         id: c.id,
@@ -203,6 +190,7 @@ export const store = {
 
         if (aErr) {
           console.error('[Store] Erro ao salvar análise:', aErr.message);
+          throw new Error(`Erro ao salvar análise: ${aErr.message}`);
         }
       }
 
@@ -239,6 +227,7 @@ export const store = {
 
         if (cErr) {
           console.error('[Store] Erro ao salvar correção:', cErr.message);
+          throw new Error(`Erro ao salvar correção: ${cErr.message}`);
         }
       }
 

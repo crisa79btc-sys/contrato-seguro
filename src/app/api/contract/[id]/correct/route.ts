@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { waitUntil } from '@vercel/functions';
 import { store } from '@/lib/store';
 import { correctContract } from '@/lib/ai/corrector';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,6 +10,16 @@ export async function POST(
   _request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  // Rate limiting: 5 correções por hora por IP
+  const ip = getClientIp(_request);
+  const rl = checkRateLimit({ name: 'correct', key: ip, maxRequests: 5, windowSeconds: 3600 });
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: 'Muitas correções em pouco tempo. Tente novamente em alguns minutos.', code: 'RATE_LIMITED' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } }
+    );
+  }
+
   const contract = await store.getContract(params.id);
 
   if (!contract) {
@@ -18,16 +29,22 @@ export async function POST(
     );
   }
 
-  if (contract.status !== 'analyzed') {
+  // Se já foi corrigido, retorna direto
+  if (contract.correction_result) {
+    return NextResponse.json({ status: 'corrected' });
+  }
+
+  // Permitir re-disparar se status ficou preso em 'correcting' por mais de 5 minutos
+  const stuckInCorrecting =
+    contract.status === 'correcting' &&
+    contract.created_at &&
+    Date.now() - new Date(contract.created_at).getTime() > 5 * 60 * 1000;
+
+  if (contract.status !== 'analyzed' && !stuckInCorrecting) {
     return NextResponse.json(
       { error: 'O contrato precisa ser analisado antes de ser corrigido.', code: 'NOT_ANALYZED' },
       { status: 400 }
     );
-  }
-
-  // Se já foi corrigido, retorna direto
-  if (contract.correction_result) {
-    return NextResponse.json({ status: 'corrected' });
   }
 
   // Disparar correção em background

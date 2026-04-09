@@ -8,6 +8,7 @@ import { cleanContractText } from '@/lib/parsers/text-cleaner';
 import { store } from '@/lib/store';
 import { classifyContract } from '@/lib/ai/classifier';
 import { analyzeContract } from '@/lib/ai/analyzer';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 
 // Magic bytes
 const MAGIC_BYTES: Record<string, number[]> = {
@@ -27,6 +28,16 @@ function validateMagicBytes(buffer: Buffer, mimeType: string): boolean {
 }
 
 export async function POST(request: NextRequest) {
+  // Rate limiting: 10 uploads por hora por IP
+  const ip = getClientIp(request);
+  const rl = checkRateLimit({ name: 'upload', key: ip, maxRequests: 10, windowSeconds: 3600 });
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: 'Muitas análises em pouco tempo. Tente novamente em alguns minutos.', code: 'RATE_LIMITED' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } }
+    );
+  }
+
   try {
     const formData = await request.formData();
     const file = formData.get('file');

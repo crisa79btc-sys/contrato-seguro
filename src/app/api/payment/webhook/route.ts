@@ -28,11 +28,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ received: true });
     }
 
-    // Consultar detalhes do pagamento na API do MP
+    // Consultar detalhes do pagamento na API do MP (fonte de verdade)
+    // Isso garante que o pagamento é real — um atacante não consegue forjar
+    // um pagamento aprovado na API oficial do Mercado Pago
     const payment = await getPaymentDetails(String(paymentId));
     if (!payment) {
       console.error('[Webhook] Não conseguiu consultar pagamento:', paymentId);
       return NextResponse.json({ received: true }, { status: 200 });
+    }
+
+    // Validar que o notification_url bate com nosso domínio (anti-replay de outro merchant)
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || '';
+    if (payment.notification_url && !payment.notification_url.startsWith(appUrl)) {
+      console.error('[Webhook] notification_url não bate:', payment.notification_url);
+      return NextResponse.json({ received: true });
     }
 
     const status = mapPaymentStatus(payment.status);

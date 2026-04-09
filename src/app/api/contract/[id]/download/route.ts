@@ -64,7 +64,7 @@ export async function GET(
     correction: parsed.data,
   };
 
-  const safeName = contract.original_filename.replace(/\.[^.]+$/, '');
+  const safeName = contract.original_filename.replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9À-ÿ_\-. ]/g, '_');
   const format = request.nextUrl.searchParams.get('format') || 'docx';
 
   try {
