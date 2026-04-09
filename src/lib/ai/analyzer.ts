@@ -159,7 +159,14 @@ Analise o contrato acima seguindo todas as instrucoes do sistema. Retorne APENAS
     timeoutMs: ANALYSIS_TIMEOUT_MS,
   });
 
-  const raw = safeParseJSON(result.content);
+  let raw = safeParseJSON(result.content);
+
+  // Guard: se a IA retornar array em vez de objeto, extrair o primeiro elemento
+  if (Array.isArray(raw) && raw.length > 0) {
+    console.warn('[Análise] IA retornou array em vez de objeto — extraindo primeiro elemento');
+    raw = raw[0];
+  }
+
   const schema = tier === 'free' ? analysisOutputFreeSchema : analysisOutputFullSchema;
   const validated = schema.safeParse(raw);
   if (!validated.success) {

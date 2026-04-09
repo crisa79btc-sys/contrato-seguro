@@ -190,7 +190,13 @@ Corrija o contrato acima seguindo todas as instrucoes do sistema. Retorne APENAS
     timeoutMs: CORRECTION_TIMEOUT_MS,
   });
 
-  const raw = safeParseJSON(result.content);
+  let raw = safeParseJSON(result.content);
+
+  // Guard: se a IA retornar array em vez de objeto, extrair o primeiro elemento
+  if (Array.isArray(raw) && raw.length > 0) {
+    console.warn('[Correção] IA retornou array em vez de objeto — extraindo primeiro elemento');
+    raw = raw[0];
+  }
 
   let validated = correctionOutputSchema.safeParse(raw);
 
