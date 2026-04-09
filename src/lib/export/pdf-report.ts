@@ -1,5 +1,6 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { DISCLAIMER_LEGAL } from '@/config/constants';
+import { sanitizeForPdf } from './sanitize-pdf';
 
 type ReportData = {
   filename: string;
@@ -43,6 +44,7 @@ export async function generateAnalysisReport(data: ReportData): Promise<Uint8Arr
   const lightGray = rgb(0.6, 0.6, 0.6);
 
   function drawText(text: string, opts: { x?: number; size?: number; font?: typeof font; color?: typeof blue; maxWidth?: number }) {
+    text = sanitizeForPdf(text);
     const sz = opts.size || 10;
     const f = opts.font || font;
     const c = opts.color || darkGray;

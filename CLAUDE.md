@@ -20,7 +20,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Geração Docs:** docx (npm) + pdf-lib (sem Puppeteer)
 - **Pagamento:** Mercado Pago — backend pronto, billing desligado na beta
 - **Banco:** Supabase (PostgreSQL) com schema 001 normalizado. Store adapta queries para tabelas separadas.
-- **Social Media:** Meta Graph API (Facebook + Instagram) + Vercel Cron + Claude para conteúdo
+- **Social Media:** Meta Graph API (Facebook + Instagram) + Vercel Cron + Claude para conteúdo + Gemini 2.0 Flash para imagens
+- **Imagens Social:** Google Gemini 2.0 Flash (gratuito, 500 img/dia) com fallback next/og
 - **Deploy:** Vercel (contrato-seguro-inky.vercel.app) + Supabase (wdsfemqjwgdfrqedvqyh)
 
 ## Modelo de Negócio
@@ -92,6 +93,8 @@ src/
     social/meta-client.ts           # Cliente Meta Graph API (Facebook + Instagram)
     social/state.ts                 # Estado da automação social (app_config)
     social/post-orchestrator.ts     # Orquestração: tema → conteúdo → imagem → publicar
+    social/gemini-image.ts          # Geração de imagens via Gemini 2.0 Flash (gratuito)
+    social/image-storage.ts         # Upload de imagens para Supabase Storage
     db/supabase.ts                  # Client Supabase (lazy, admin + public)
     store.ts                        # Store dual-mode: Supabase (schema 001 normalizado) ou memória (dev)
     local-history.ts                # Histórico local no localStorage
@@ -107,6 +110,7 @@ src/
 docs/
   database/001_initial_schema.sql   # Schema ativo no Supabase (9 tabelas + RLS)
   database/002_beta_simplified.sql  # Schema alternativo (NÃO usado — mantido como referência)
+  database/003_storage_social_images.sql # Bucket Storage para imagens sociais (Gemini)
   database/README.md                # Como aplicar migrações
   prompts/system-analyzer.md        # Prompt do analisador (com jurisprudência pacificada)
   prompts/system-classifier.md      # Prompt do classificador
@@ -157,6 +161,8 @@ docs/
 - SEO completo: sitemap, robots.txt, JSON-LD, Open Graph, Twitter Cards, FAQ structured data
 - OG image dinâmica para previews no WhatsApp/Facebook
 - PWA manifest (instalável no celular)
+- Gemini 2.0 Flash para imagens profissionais (com fallback next/og se não configurado)
+- Supabase Storage para imagens geradas (URL pública acessível pelo Meta)
 - 29 testes unitários (Vitest)
 
 ## O que falta para completar a Fase 1
@@ -208,6 +214,7 @@ META_PAGE_ACCESS_TOKEN=    # Token da página Facebook (longa duração)
 META_PAGE_ID=              # ID da página Facebook
 META_IG_USER_ID=           # ID da conta Business Instagram
 CRON_SECRET=               # Gerado automaticamente pelo Vercel
+GEMINI_API_KEY=            # Google AI Studio (gratuito: 500 img/dia)
 ```
 
 ### Setup pendente do usuário

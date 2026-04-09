@@ -6,6 +6,7 @@ import { correctionOutputSchema } from '@/schemas/ai-output.schema';
 import { isBillingEnabled } from '@/config/constants';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 30;
 
 const TYPE_LABELS: Record<string, string> = {
   aluguel: 'Contrato de Aluguel',
@@ -72,21 +73,29 @@ export async function GET(
   const safeName = contract.original_filename.replace(/\.[^.]+$/, '');
   const format = request.nextUrl.searchParams.get('format') || 'docx';
 
-  if (format === 'pdf') {
-    const pdfBytes = await generateCorrectedPdf(docData);
-    return new NextResponse(Buffer.from(pdfBytes), {
+  try {
+    if (format === 'pdf') {
+      const pdfBytes = await generateCorrectedPdf(docData);
+      return new NextResponse(Buffer.from(pdfBytes), {
+        headers: {
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': `attachment; filename="${safeName}_corrigido.pdf"`,
+        },
+      });
+    }
+
+    const buffer = await generateCorrectedDocx(docData);
+    return new NextResponse(new Uint8Array(buffer), {
       headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="${safeName}_corrigido.pdf"`,
+        'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'Content-Disposition': `attachment; filename="${safeName}_corrigido.docx"`,
       },
     });
+  } catch (err) {
+    console.error(`[Download] Erro ao gerar ${format} para ${params.id}:`, err);
+    return NextResponse.json(
+      { error: `Erro ao gerar o arquivo ${format.toUpperCase()}. Tente novamente.`, code: 'GENERATION_ERROR' },
+      { status: 500 }
+    );
   }
-
-  const buffer = await generateCorrectedDocx(docData);
-  return new NextResponse(new Uint8Array(buffer), {
-    headers: {
-      'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'Content-Disposition': `attachment; filename="${safeName}_corrigido.docx"`,
-    },
-  });
 }

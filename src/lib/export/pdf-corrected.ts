@@ -1,5 +1,6 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import type { CorrectionOutput } from '@/schemas/ai-output.schema';
+import { sanitizeForPdf } from './sanitize-pdf';
 
 type PdfData = {
   filename: string;
@@ -143,9 +144,11 @@ export async function generateCorrectedPdf(data: PdfData): Promise<Uint8Array> {
     }
   }
 
-  // Limpar tags de marcação
-  const cleanText = data.correction.corrected_text
-    .replace(/\[(REMOVED|MODIFIED|CLARIFIED|ADDED|UPDATED|SIMPLIFIED)\]\s*/g, '');
+  // Limpar tags de marcação e sanitizar para WinAnsi
+  const cleanText = sanitizeForPdf(
+    data.correction.corrected_text
+      .replace(/\[(REMOVED|MODIFIED|CLARIFIED|ADDED|UPDATED|SIMPLIFIED)\]\s*/g, '')
+  );
 
   const lines = cleanText.split('\n');
 

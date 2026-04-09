@@ -62,6 +62,40 @@ export default function AnalisePage({ params }: { params: { id: string } }) {
   const [polling, setPolling] = useState(true);
   const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
   const [paying, setPaying] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState<string | null>(null);
+
+  // Download seguro via fetch (evita baixar JSON de erro como arquivo)
+  const handleDownload = useCallback(async (url: string, fallbackFilename: string) => {
+    setDownloadError(null);
+    setDownloading(fallbackFilename);
+    try {
+      const res = await fetch(url);
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => null);
+        setDownloadError(errorData?.error || `Erro ao baixar o arquivo (${res.status}). Tente novamente.`);
+        return;
+      }
+      const blob = await res.blob();
+      const contentDisposition = res.headers.get('Content-Disposition');
+      let filename = fallbackFilename;
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename="?([^"]+)"?/);
+        if (match) filename = match[1];
+      }
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(a.href);
+    } catch {
+      setDownloadError('Erro de conexão ao baixar o arquivo. Verifique sua internet e tente novamente.');
+    } finally {
+      setDownloading(null);
+    }
+  }, []);
 
   // Detectar retorno do Mercado Pago (?payment=success|failure|pending)
   useEffect(() => {
@@ -328,17 +362,24 @@ export default function AnalisePage({ params }: { params: { id: string } }) {
               </div>
 
               {/* Download do relatório */}
-              <div className="flex justify-center">
-                <a
-                  href={`/api/contract/${params.id}/report`}
-                  download
-                  className="flex items-center gap-2 rounded-xl border border-brand-200 bg-brand-50 px-6 py-3 text-sm font-semibold text-brand-700 shadow-sm transition-all hover:bg-brand-100 active:scale-95"
+              <div className="flex flex-col items-center gap-2">
+                <button
+                  onClick={() => handleDownload(`/api/contract/${params.id}/report`, `analise-contrato-${params.id.slice(0, 8)}.pdf`)}
+                  disabled={downloading !== null}
+                  className="flex items-center gap-2 rounded-xl border border-brand-200 bg-brand-50 px-6 py-3 text-sm font-semibold text-brand-700 shadow-sm transition-all hover:bg-brand-100 active:scale-95 disabled:opacity-50 disabled:cursor-wait"
                 >
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                  </svg>
+                  {downloading === `analise-contrato-${params.id.slice(0, 8)}.pdf` ? (
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-brand-300 border-t-brand-700" />
+                  ) : (
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                    </svg>
+                  )}
                   Baixar relatório em PDF
-                </a>
+                </button>
+                {downloadError && !downloading && (
+                  <p className="text-xs text-red-600 text-center max-w-sm">{downloadError}</p>
+                )}
               </div>
 
               {/* Correção do contrato */}
@@ -402,6 +443,9 @@ export default function AnalisePage({ params }: { params: { id: string } }) {
                   billingEnabled={billingEnabled}
                   onPayment={handlePayment}
                   paying={paying}
+                  onDownload={handleDownload}
+                  downloading={downloading}
+                  downloadError={downloadError}
                 />
               )}
 
@@ -458,13 +502,16 @@ const ACTION_LABELS: Record<string, string> = {
   simplified: 'Simplificada',
 };
 
-function CorrectionResult({ correction, contractId, canDownloadFree, billingEnabled, onPayment, paying }: {
+function CorrectionResult({ correction, contractId, canDownloadFree, billingEnabled, onPayment, paying, onDownload, downloading, downloadError }: {
   correction: CorrectionData;
   contractId: string;
   canDownloadFree: boolean;
   billingEnabled: boolean;
   onPayment: () => void;
   paying: boolean;
+  onDownload: (url: string, filename: string) => void;
+  downloading: string | null;
+  downloadError: string | null;
 }) {
   return (
     <div className="space-y-6">
@@ -559,27 +606,40 @@ function CorrectionResult({ correction, contractId, canDownloadFree, billingEnab
 
         {canDownloadFree ? (
           /* Download liberado (beta grátis ou já pagou) */
-          <div className="flex flex-col sm:flex-row justify-center gap-3">
-            <a
-              href={`/api/contract/${contractId}/download?format=docx`}
-              download
-              className="flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-600/25 transition-all hover:bg-brand-700 hover:shadow-xl active:scale-95"
-            >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-              </svg>
-              Word (.docx)
-            </a>
-            <a
-              href={`/api/contract/${contractId}/download?format=pdf`}
-              download
-              className="flex items-center justify-center gap-2 rounded-xl border-2 border-brand-600 px-6 py-3 text-sm font-semibold text-brand-600 transition-all hover:bg-brand-50 active:scale-95"
-            >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m.75 12 3 3m0 0 3-3m-3 3v-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-              </svg>
-              PDF (.pdf)
-            </a>
+          <div className="flex flex-col items-center gap-3">
+            <div className="flex flex-col sm:flex-row justify-center gap-3">
+              <button
+                onClick={() => onDownload(`/api/contract/${contractId}/download?format=docx`, `contrato_corrigido.docx`)}
+                disabled={downloading !== null}
+                className="flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-600/25 transition-all hover:bg-brand-700 hover:shadow-xl active:scale-95 disabled:opacity-50 disabled:cursor-wait"
+              >
+                {downloading === 'contrato_corrigido.docx' ? (
+                  <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                ) : (
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                  </svg>
+                )}
+                Word (.docx)
+              </button>
+              <button
+                onClick={() => onDownload(`/api/contract/${contractId}/download?format=pdf`, `contrato_corrigido.pdf`)}
+                disabled={downloading !== null}
+                className="flex items-center justify-center gap-2 rounded-xl border-2 border-brand-600 px-6 py-3 text-sm font-semibold text-brand-600 transition-all hover:bg-brand-50 active:scale-95 disabled:opacity-50 disabled:cursor-wait"
+              >
+                {downloading === 'contrato_corrigido.pdf' ? (
+                  <span className="h-5 w-5 animate-spin rounded-full border-2 border-brand-300 border-t-brand-600" />
+                ) : (
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m.75 12 3 3m0 0 3-3m-3 3v-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                  </svg>
+                )}
+                PDF (.pdf)
+              </button>
+            </div>
+            {downloadError && !downloading && (
+              <p className="text-xs text-red-600 text-center max-w-sm">{downloadError}</p>
+            )}
           </div>
         ) : (
           /* Pagamento necessário */

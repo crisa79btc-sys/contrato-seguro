@@ -46,6 +46,12 @@ export const SOCIAL_MEDIA = {
   TIMEOUT_MS: 30_000,
 } as const;
 
+// Gemini Image Generation (gratuito com billing habilitado no Google AI)
+export const GEMINI_IMAGE = {
+  MODEL: 'gemini-2.5-flash-image',
+  STORAGE_BUCKET: 'social-images',
+} as const;
+
 // Disclaimer legal
 export const DISCLAIMER_LEGAL =
   'O ContratoSeguro é uma ferramenta de análise automatizada que utiliza inteligência artificial para identificar possíveis riscos em contratos. Esta análise NÃO constitui parecer jurídico, consultoria legal ou aconselhamento profissional. Para decisões importantes, recomendamos consultar um advogado. O ContratoSeguro não se responsabiliza por decisões tomadas com base exclusiva nesta análise.';
