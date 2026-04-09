@@ -39,16 +39,10 @@ export async function GET(
     );
   }
 
-  if (!isBillingEnabled() && contract.status !== 'corrected' && contract.status !== 'paid') {
-    return NextResponse.json(
-      { error: 'O contrato ainda não foi corrigido.', code: 'NOT_CORRECTED' },
-      { status: 400 }
-    );
-  }
-
+  // Verificar se a correção existe (por dados reais, não só por status)
   if (!contract.correction_result) {
     return NextResponse.json(
-      { error: 'O contrato ainda não foi corrigido.', code: 'NOT_CORRECTED' },
+      { error: 'O contrato ainda não foi corrigido. Clique em "Corrigir contrato" primeiro.', code: 'NOT_CORRECTED' },
       { status: 400 }
     );
   }
