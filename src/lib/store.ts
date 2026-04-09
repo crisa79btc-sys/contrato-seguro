@@ -117,6 +117,13 @@ export const store = {
       const c = contractRes.data;
       if (!c) return undefined;
 
+      if (analysisRes.error) {
+        console.error('[Store] Erro ao buscar análise:', analysisRes.error.message);
+      }
+      if (correctionRes.error) {
+        console.error('[Store] Erro ao buscar correção:', correctionRes.error.message);
+      }
+
       const analysisResult = analysisRes.data?.parties ?? null;
       const correctionResult = correctionRes.data?.changes ?? null;
 

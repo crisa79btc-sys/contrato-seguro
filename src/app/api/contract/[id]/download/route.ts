@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { store } from '@/lib/store';
+import { getAdminClient } from '@/lib/db/supabase';
 import { generateCorrectedDocx } from '@/lib/export/docx-corrected';
 import { generateCorrectedPdf } from '@/lib/export/pdf-corrected';
 import { correctionOutputSchema } from '@/schemas/ai-output.schema';
@@ -22,16 +22,24 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const contract = await store.getContract(params.id);
+  const supabase = getAdminClient();
 
-  if (!contract) {
+  // Query direta: buscar contrato + correção em paralelo, sem intermediários
+  const [contractRes, correctionRes] = await Promise.all([
+    supabase.from('contracts').select('id, status, original_filename, contract_type').eq('id', params.id).single(),
+    supabase.from('corrected_contracts').select('changes').eq('contract_id', params.id).maybeSingle(),
+  ]);
+
+  if (contractRes.error || !contractRes.data) {
     return NextResponse.json(
       { error: 'Contrato não encontrado.', code: 'NOT_FOUND' },
       { status: 404 }
     );
   }
 
-  // Gate de pagamento: quando billing ativo, exige status 'paid'
+  const contract = contractRes.data;
+
+  // Gate de pagamento
   if (isBillingEnabled() && contract.status !== 'paid') {
     return NextResponse.json(
       { error: 'Pagamento necessário para baixar o contrato corrigido.', code: 'PAYMENT_REQUIRED' },
@@ -39,18 +47,24 @@ export async function GET(
     );
   }
 
-  // Verificar se a correção existe (por dados reais, não só por status)
-  if (!contract.correction_result) {
+  // Verificar se a correção existe
+  if (correctionRes.error) {
+    console.error(`[Download] Erro ao buscar correção: ${correctionRes.error.message}`);
+  }
+
+  const correctionData = correctionRes.data?.changes as Record<string, unknown> | null;
+
+  if (!correctionData) {
     return NextResponse.json(
       { error: 'O contrato ainda não foi corrigido. Clique em "Corrigir contrato" primeiro.', code: 'NOT_CORRECTED' },
       { status: 400 }
     );
   }
 
-  const correctionData = contract.correction_result as Record<string, unknown>;
   const parsed = correctionOutputSchema.safeParse(correctionData);
 
   if (!parsed.success) {
+    console.error(`[Download] Dados de correção inválidos:`, parsed.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join('; '));
     return NextResponse.json(
       { error: 'Dados de correção inválidos.', code: 'INVALID_DATA' },
       { status: 500 }
@@ -59,12 +73,12 @@ export async function GET(
 
   const contractType = contract.contract_type || 'outro';
   const docData = {
-    filename: contract.original_filename,
+    filename: contract.original_filename || 'contrato',
     contractType: TYPE_LABELS[contractType] || contractType,
     correction: parsed.data,
   };
 
-  const safeName = contract.original_filename.replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9À-ÿ_\-. ]/g, '_');
+  const safeName = (contract.original_filename || 'contrato').replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9À-ÿ_\-. ]/g, '_');
   const format = request.nextUrl.searchParams.get('format') || 'docx';
 
   try {

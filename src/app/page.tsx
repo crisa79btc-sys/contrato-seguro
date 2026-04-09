@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/ui/Header';
 import Footer from '@/components/ui/Footer';
@@ -117,11 +117,23 @@ export default function Home() {
               </span>
             </div>
 
-            {/* Stats */}
-            <div className="mt-10 grid gap-6 sm:grid-cols-3">
-              <StatCard label="Análises realizadas" value={500} suffix="+" />
-              <StatCard label="Cláusulas abusivas detectadas" value={2000} suffix="+" />
-              <StatCard label="Economia estimada para usuários" prefix="R$ " value={1} suffix="M+" />
+            {/* Badges reais */}
+            <div className="mt-10 grid gap-4 sm:grid-cols-3">
+              <TrustBadge
+                title="Powered by Claude AI"
+                description="IA da Anthropic, líder mundial em segurança e confiabilidade"
+                icon={<path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 0 0-2.455 2.456Z" />}
+              />
+              <TrustBadge
+                title="Legislação Brasileira"
+                description="Análise baseada no CC, CDC, CLT e jurisprudência do STF e STJ"
+                icon={<path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />}
+              />
+              <TrustBadge
+                title="Conformidade LGPD"
+                description="Seus dados nunca são usados para treinar IA nem compartilhados"
+                icon={<path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />}
+              />
             </div>
           </div>
         </section>
@@ -132,11 +144,11 @@ export default function Home() {
             <h2 className="text-center text-2xl font-bold text-gray-900 sm:text-3xl">
               Como funciona
             </h2>
-            <div className="mt-10 grid gap-8 sm:grid-cols-3">
+            <div className="mt-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
               <Step
                 number={1}
                 title="Envie seu contrato"
-                description="Faça upload do PDF do seu contrato. Simples, rápido e seguro."
+                description="Faça upload do PDF ou imagem. Simples e seguro."
                 icon={
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
                 }
@@ -144,15 +156,23 @@ export default function Home() {
               <Step
                 number={2}
                 title="Receba a análise"
-                description="Nossa IA identifica cláusulas abusivas, riscos e falhas com fundamentação legal."
+                description="A IA identifica cláusulas abusivas e riscos com fundamentação legal."
                 icon={
                   <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
                 }
               />
               <Step
                 number={3}
-                title="Baixe a versão corrigida"
-                description="Receba seu contrato corrigido, pronto para assinar, em Word ou PDF."
+                title="Corrija o contrato"
+                description="Com um clique, a IA gera uma versão corrigida e equilibrada."
+                icon={
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+                }
+              />
+              <Step
+                number={4}
+                title="Baixe em Word ou PDF"
+                description="Pronto para assinar. Baixe no formato que preferir."
                 icon={
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
                 }
@@ -310,63 +330,17 @@ function FAQ({ question, answer }: { question: string; answer: string }) {
   );
 }
 
-function AnimatedCounter({ value, prefix = '', suffix = '' }: { value: number; prefix?: string; suffix?: string }) {
-  const [display, setDisplay] = useState(0);
-  const ref = useRef<HTMLSpanElement>(null);
-  const hasAnimated = useRef(false);
 
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && !hasAnimated.current) {
-          hasAnimated.current = true;
-          const duration = 1500;
-          const start = performance.now();
-
-          const tick = (now: number) => {
-            const elapsed = now - start;
-            const progress = Math.min(elapsed / duration, 1);
-            // ease-out cubic
-            const eased = 1 - Math.pow(1 - progress, 3);
-            setDisplay(Math.round(eased * value));
-            if (progress < 1) requestAnimationFrame(tick);
-          };
-
-          requestAnimationFrame(tick);
-        }
-      },
-      { threshold: 0.3 }
-    );
-
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [value]);
-
-  const formatNumber = (n: number) => {
-    if (value >= 1000) {
-      const thousands = Math.floor(n / 1000);
-      return `${thousands}.${String(n - thousands * 1000).padStart(3, '0')}`;
-    }
-    return n.toLocaleString('pt-BR');
-  };
-
+function TrustBadge({ title, description, icon }: { title: string; description: string; icon: React.ReactNode }) {
   return (
-    <span ref={ref}>
-      {prefix}{formatNumber(display)}{suffix}
-    </span>
-  );
-}
-
-function StatCard({ label, value, prefix = '', suffix = '' }: { label: string; value: number; prefix?: string; suffix?: string }) {
-  return (
-    <div className="rounded-xl border border-gray-200 bg-white p-6 text-center shadow-sm">
-      <p className="text-3xl font-extrabold text-brand-600 sm:text-4xl">
-        <AnimatedCounter value={value} prefix={prefix} suffix={suffix} />
-      </p>
-      <p className="mt-2 text-sm text-gray-600">{label}</p>
+    <div className="flex flex-col items-center rounded-xl border border-gray-200 bg-white p-5 text-center shadow-sm">
+      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-100">
+        <svg className="h-5 w-5 text-brand-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+          {icon}
+        </svg>
+      </div>
+      <p className="mt-3 text-sm font-semibold text-gray-900">{title}</p>
+      <p className="mt-1 text-xs leading-relaxed text-gray-500">{description}</p>
     </div>
   );
 }
