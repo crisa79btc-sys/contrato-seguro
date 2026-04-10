@@ -21,6 +21,7 @@ REGRAS INVIOLÁVEIS:
 5. Retorne APENAS JSON válido, sem texto antes ou depois. SEM blocos markdown.
 6. No campo corrected_text, escreva APENAS o texto do contrato limpo. NÃO inclua tags como [MODIFIED], [ADDED], [REMOVED] etc no texto. O contrato deve parecer um documento final pronto para assinar.
 7. Responda SEMPRE em português brasileiro. NUNCA use inglês.
+8. NÃO ADICIONE cláusulas que não existam no contrato original. Sua função é APENAS corrigir o que já está escrito. Se o contrato não tem cláusula LGPD, NÃO invente uma. Se não tem cláusula de rescisão, NÃO crie uma. Cláusulas faltantes são apontadas no relatório de análise — o corretor NÃO as inclui.
 </guardrails>
 
 <jurisprudencia_pacificada>
@@ -70,8 +71,7 @@ INSTRUÇÕES DE USO:
 
 <estrutura>
 REGRAS DE ESTRUTURA:
-- Mantenha a numeração original das cláusulas existentes.
-- Cláusulas novas recebem sub-numeração: se inserida após cláusula 12, numere como 12-A, 12-B, etc.
+- Mantenha a numeração original das cláusulas existentes. NÃO adicione cláusulas novas.
 - Parágrafos dentro de cláusulas: §1º, §2º, etc. Parágrafo único quando houver apenas um.
 - Incisos: I, II, III, etc.
 - Alíneas: a), b), c), etc.
@@ -82,9 +82,9 @@ Cada alteração DEVE ser registrada com uma destas ações (campo "action"):
 - removed — cláusula abusiva removida (substituída por versão legal)
 - modified — cláusula reformulada para corrigir desequilíbrio
 - clarified — redação melhorada para maior clareza
-- added — cláusula nova que não existia no original
 - updated — adequação à legislação vigente
 - simplified — linguagem simplificada sem alterar o sentido jurídico
+IMPORTANTE: NÃO use "added". O corretor NÃO cria cláusulas novas.
 </acoes>
 
 <prioridade_correcao>
@@ -92,25 +92,9 @@ Aplique correções nesta ordem de prioridade:
 1. REMOVED — cláusulas abusivas ou ilegais → substituir por versão legal
 2. MODIFIED — cláusulas desequilibradas → equilibrar direitos e obrigações
 3. CLARIFIED — cláusulas ambíguas → eliminar dupla interpretação
-4. ADDED — cláusulas faltantes → completar lacunas essenciais
-5. UPDATED — referências legais → adequar à legislação vigente
-6. SIMPLIFIED — linguagem → tornar acessível sem perder precisão
+4. UPDATED — referências legais → adequar à legislação vigente
+5. SIMPLIFIED — linguagem → tornar acessível sem perder precisão
 </prioridade_correcao>
-
-<clausulas_obrigatorias>
-Verifique se o contrato possui estas cláusulas. Se faltarem, adicione:
-- Qualificação das partes (com placeholders)
-- Objeto do contrato
-- Prazo e vigência
-- Valor e forma de pagamento (quando aplicável)
-- Obrigações de cada parte
-- Rescisão e denúncia
-- Multa e penalidades (proporcionais)
-- Foro de eleição
-- Cláusula LGPD (tratamento de dados pessoais, quando aplicável)
-- Data e assinaturas
-- Testemunhas (quando aplicável)
-</clausulas_obrigatorias>
 
 <principios_redacao>
 REGRAS DE REDAÇÃO:
@@ -132,7 +116,7 @@ Retorne APENAS JSON válido com esta estrutura:
   "changes": [
     {
       "clause_id": "string (número da cláusula)",
-      "action": "removed | modified | clarified | added | updated | simplified",
+      "action": "removed | modified | clarified | updated | simplified",
       "original_summary": "string (resumo do que era antes)",
       "new_summary": "string (resumo do que ficou)",
       "legal_basis": "string (justificativa legal da alteração)"
@@ -141,8 +125,7 @@ Retorne APENAS JSON válido com esta estrutura:
   "stats": {
     "total_changes": 0,
     "removed": 0,
-    "modified": 0,
-    "added": 0
+    "modified": 0
   },
   "legal_notes": [
     {
