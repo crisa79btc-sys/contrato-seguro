@@ -45,12 +45,15 @@ const CATEGORY_EMOJIS: Record<string, string> = {
  */
 export async function runSocialPost(options?: {
   dryRun?: boolean;
+  force?: boolean;
 }): Promise<OrchestratorResult> {
   const dryRun = options?.dryRun ?? false;
+  const force = options?.force ?? false;
 
   // 1. Verificar se já postou hoje
-  if (!dryRun) {
+  if (!dryRun && !force) {
     const alreadyPosted = await hasPostedToday();
+    console.log(`[Social] hasPostedToday=${alreadyPosted}`);
     if (alreadyPosted) {
       console.log('[Social] Já postou hoje, pulando.');
       return { success: true, topicKey: 'skipped', error: 'Já postou hoje' };

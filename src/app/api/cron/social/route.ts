@@ -20,11 +20,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // Verificar se é teste manual (query param ?dryRun=true)
+  // Verificar parâmetros
   const dryRun = request.nextUrl.searchParams.get('dryRun') === 'true';
+  const force = request.nextUrl.searchParams.get('force') === 'true';
 
   try {
-    const result = await runSocialPost({ dryRun });
+    const result = await runSocialPost({ dryRun, force });
     return NextResponse.json({ status: 'ok', ...result, dryRun });
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Erro desconhecido';
