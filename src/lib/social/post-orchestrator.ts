@@ -127,12 +127,13 @@ export async function runSocialPost(options?: {
   }
 
   // 7. Publicar no Facebook
+  // Estratégia: postar como link preview (Facebook busca a OG image do site automaticamente).
+  // Evita o problema de Facebook tentar buscar imagem de URL com parâmetros longos.
   let fbResult: MetaPostResult | undefined;
   if (configured.facebook) {
     console.log('[Social] Publicando no Facebook...');
     fbResult = await postToFacebook({
       message: fullCaption,
-      imageUrl,
       link: APP_URL,
     });
     console.log('[Social] Facebook:', fbResult.success ? `OK (${fbResult.id})` : `ERRO: ${fbResult.error}`);
@@ -149,20 +150,24 @@ export async function runSocialPost(options?: {
     console.log('[Social] Instagram:', igResult.success ? `OK (${igResult.id})` : `ERRO: ${igResult.error}`);
   }
 
-  // 9. Registrar no estado
-  const today = new Date().toISOString().split('T')[0];
-  await recordPost({
-    date: today,
-    topicKey: topic.key,
-    fbPostId: fbResult?.success ? fbResult.id : undefined,
-    igPostId: igResult?.success ? igResult.id : undefined,
-    error:
-      (!fbResult?.success && fbResult?.error) || (!igResult?.success && igResult?.error)
-        ? `FB: ${fbResult?.error || 'ok'} | IG: ${igResult?.error || 'ok'}`
-        : undefined,
-  });
-
   const anySuccess = (fbResult?.success ?? false) || (igResult?.success ?? false);
+
+  // 9. Registrar no estado apenas se ao menos uma publicação teve sucesso
+  if (anySuccess) {
+    const today = new Date().toISOString().split('T')[0];
+    await recordPost({
+      date: today,
+      topicKey: topic.key,
+      fbPostId: fbResult?.success ? fbResult.id : undefined,
+      igPostId: igResult?.success ? igResult.id : undefined,
+      error:
+        (!fbResult?.success && fbResult?.error) || (!igResult?.success && igResult?.error)
+          ? `FB: ${fbResult?.error || 'ok'} | IG: ${igResult?.error || 'ok'}`
+          : undefined,
+    });
+  } else {
+    console.error('[Social] Nenhuma rede publicou com sucesso — estado NÃO registrado para permitir retry.');
+  }
 
   return {
     success: anySuccess,
