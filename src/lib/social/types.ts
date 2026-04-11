@@ -51,4 +51,5 @@ export type OrchestratorResult = {
   facebook?: MetaPostResult;
   instagram?: MetaPostResult;
   error?: string;
+  debug?: Record<string, string>;
 };
