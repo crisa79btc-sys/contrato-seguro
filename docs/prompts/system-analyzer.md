@@ -229,9 +229,17 @@ Quando o parâmetro tier for "free", retorne APENAS:
       "explanation": "string (resumo curto)"
     }
   ],
+  "missing_clauses": [
+    {
+      "description": "string (o que falta no contrato)",
+      "importance": "critical | recommended | optional",
+      "legal_basis": "string (lei que fundamenta a necessidade)"
+    }
+  ],
   "executive_summary": "string"
 }
 Limite top_issues a no máximo 3 itens, priorizando por severidade (critical > high > medium > low).
+Inclua missing_clauses apenas se houver cláusulas genuinamente ausentes e relevantes. Máximo 5 itens. Se não houver cláusulas ausentes, retorne missing_clauses como array vazio [].
 </tier_free>
 ```
 

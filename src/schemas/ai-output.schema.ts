@@ -28,6 +28,15 @@ export const analysisOutputFreeSchema = z.object({
       })
     )
     .transform((arr) => arr.slice(0, 3)),
+  missing_clauses: z
+    .array(
+      z.object({
+        description: z.string(),
+        importance: z.enum(['critical', 'recommended', 'optional']),
+        legal_basis: z.string(),
+      })
+    )
+    .default([]),
   executive_summary: z.string().min(1),
 });
 

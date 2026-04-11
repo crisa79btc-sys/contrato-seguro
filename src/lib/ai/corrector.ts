@@ -3,6 +3,12 @@ import { safeParseJSON } from './utils';
 import { AI_MODELS, AI_MAX_TOKENS, CORRECTION_TIMEOUT_MS } from '@/config/constants';
 import { correctionOutputSchema, type CorrectionOutput } from '@/schemas/ai-output.schema';
 
+type RequestedClause = {
+  description: string;
+  importance: string;
+  legal_basis: string;
+};
+
 const SYSTEM_PROMPT = `Você é um redator jurídico especializado em contratos brasileiros. Sua função é corrigir o contrato recebido com base na análise prévia, gerando um contrato revisado completo.
 
 <guardrails>
@@ -14,7 +20,7 @@ REGRAS INVIOLÁVEIS:
 5. Retorne APENAS JSON válido, sem texto antes ou depois. SEM blocos markdown.
 6. No campo corrected_text, escreva APENAS o texto do contrato limpo. NÃO inclua tags como [MODIFIED], [ADDED], [REMOVED] etc no texto. O contrato deve parecer um documento final pronto para assinar.
 7. Responda SEMPRE em português brasileiro. NUNCA use inglês.
-8. NÃO ADICIONE cláusulas que não existam no contrato original. Sua função é APENAS corrigir o que já está escrito. Se o contrato não tem cláusula LGPD, NÃO invente uma. Se não tem cláusula de rescisão, NÃO crie uma. Cláusulas faltantes são apontadas no relatório de análise — o corretor NÃO as inclui.
+8. NÃO ADICIONE cláusulas que não existam no contrato original, EXCETO quando o usuário solicitou explicitamente via <clausulas_solicitadas>. Nesse caso, adicione SOMENTE as cláusulas listadas lá, ao final do contrato, com numeração sequencial após a última cláusula existente. Não invente cláusulas além das solicitadas.
 </guardrails>
 
 <jurisprudencia_pacificada>
@@ -64,7 +70,8 @@ INSTRUÇÕES DE USO:
 
 <estrutura>
 REGRAS DE ESTRUTURA:
-- Mantenha a numeração original das cláusulas existentes. NÃO adicione cláusulas novas.
+- Mantenha a numeração original das cláusulas existentes.
+- Se houver <clausulas_solicitadas>, adicione-as ao final do contrato, numerando sequencialmente após a última cláusula existente.
 - Parágrafos dentro de cláusulas: §1º, §2º, etc. Parágrafo único quando houver apenas um.
 - Incisos: I, II, III, etc.
 - Alíneas: a), b), c), etc.
@@ -77,7 +84,7 @@ Cada alteração DEVE ser registrada com uma destas ações (campo "action"):
 - clarified — redação melhorada para maior clareza
 - updated — adequação à legislação vigente
 - simplified — linguagem simplificada sem alterar o sentido jurídico
-IMPORTANTE: NÃO use "added". O corretor NÃO cria cláusulas novas.
+- added — cláusula nova incluída a pedido explícito do usuário (usar APENAS para itens de <clausulas_solicitadas>)
 </acoes>
 
 <prioridade_correcao>
@@ -151,8 +158,20 @@ function filterAnalysisForCorrection(analysisResult: unknown): Record<string, un
   };
 }
 
-export async function correctContract(contractText: string, analysisResult: unknown) {
+export async function correctContract(
+  contractText: string,
+  analysisResult: unknown,
+  requestedClauses?: RequestedClause[]
+) {
   const filteredAnalysis = filterAnalysisForCorrection(analysisResult);
+
+  const clausesSection =
+    requestedClauses && requestedClauses.length > 0
+      ? `\n\n<clausulas_solicitadas>
+O usuário solicitou a inclusão das seguintes cláusulas ausentes. Adicione-as ao final do contrato com numeração sequencial após a última cláusula existente. Redija cada cláusula de forma clara e juridicamente fundamentada:
+${JSON.stringify(requestedClauses, null, 2)}
+</clausulas_solicitadas>`
+      : '';
 
   const userPrompt = `<contrato_original>
 ${contractText}
@@ -160,7 +179,7 @@ ${contractText}
 
 <analise_previa>
 ${JSON.stringify(filteredAnalysis, null, 2)}
-</analise_previa>
+</analise_previa>${clausesSection}
 
 Corrija o contrato acima seguindo todas as instrucoes do sistema. Retorne APENAS o JSON.`;
 

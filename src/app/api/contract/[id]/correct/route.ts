@@ -7,11 +7,11 @@ import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 export const dynamic = 'force-dynamic';
 
 export async function POST(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   // Rate limiting: 5 correções por hora por IP
-  const ip = getClientIp(_request);
+  const ip = getClientIp(request);
   const rl = checkRateLimit({ name: 'correct', key: ip, maxRequests: 5, windowSeconds: 3600 });
   if (!rl.allowed) {
     return NextResponse.json(
@@ -19,6 +19,10 @@ export async function POST(
       { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } }
     );
   }
+
+  // Ler cláusulas solicitadas pelo usuário (opcional)
+  const body = await request.json().catch(() => ({}));
+  const requestedClauses = Array.isArray(body?.requested_clauses) ? body.requested_clauses : [];
 
   const contract = await store.getContract(params.id);
 
@@ -50,7 +54,7 @@ export async function POST(
   // Disparar correção em background
   await store.updateContract(params.id, { status: 'correcting' });
 
-  const backgroundTask = processCorrection(params.id).catch(async (err) => {
+  const backgroundTask = processCorrection(params.id, requestedClauses).catch(async (err) => {
     console.error(`Erro na correção do contrato ${params.id}:`, err);
     await store.updateContract(params.id, {
       status: 'analyzed',
@@ -62,16 +66,20 @@ export async function POST(
   return NextResponse.json({ status: 'correcting' }, { status: 202 });
 }
 
-async function processCorrection(contractId: string) {
+async function processCorrection(
+  contractId: string,
+  requestedClauses?: { description: string; importance: string; legal_basis: string }[]
+) {
   const contract = await store.getContract(contractId);
   if (!contract) throw new Error('Contrato não encontrado');
 
-  console.log(`[Correção] Iniciando correção do contrato ${contractId}...`);
+  console.log(`[Correção] Iniciando correção do contrato ${contractId}${requestedClauses?.length ? ` (+${requestedClauses.length} cláusulas solicitadas)` : ''}...`);
   const start = Date.now();
 
   const { correction, usage } = await correctContract(
     contract.original_text,
-    contract.analysis_result
+    contract.analysis_result,
+    requestedClauses
   );
 
   const elapsed = Math.round((Date.now() - start) / 1000);

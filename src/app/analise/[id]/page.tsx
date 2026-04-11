@@ -34,6 +34,12 @@ type CorrectionData = {
   disclaimer: string;
 };
 
+type MissingClause = {
+  description: string;
+  importance: 'critical' | 'recommended' | 'optional';
+  legal_basis: string;
+};
+
 type AnalysisData = {
   status: string;
   contractType: string | null;
@@ -49,6 +55,7 @@ type AnalysisData = {
       risk_level: string;
       explanation: string;
     }[];
+    missing_clauses?: MissingClause[];
     executive_summary: string;
   };
   correction?: CorrectionData;
@@ -64,6 +71,8 @@ export default function AnalisePage({ params }: { params: { id: string } }) {
   const [paying, setPaying] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState<string | null>(null);
+  const [selectedMissingClauses, setSelectedMissingClauses] = useState<string[]>([]);
+  const [clausesInitialized, setClausesInitialized] = useState(false);
 
   // Download seguro via fetch (evita baixar JSON de erro como arquivo)
   const handleDownload = useCallback(async (url: string, fallbackFilename: string) => {
@@ -207,7 +216,18 @@ export default function AnalisePage({ params }: { params: { id: string } }) {
     setCorrecting(true);
     setCorrectionError(null);
     try {
-      const res = await fetch(`/api/contract/${params.id}/correct`, { method: 'POST' });
+      const requestedClauses =
+        selectedMissingClauses.length > 0
+          ? (data?.result?.missing_clauses ?? []).filter((c) =>
+              selectedMissingClauses.includes(c.description)
+            )
+          : [];
+
+      const res = await fetch(`/api/contract/${params.id}/correct`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requested_clauses: requestedClauses }),
+      });
       if (!res.ok) {
         const json = await res.json().catch(() => null);
         throw new Error(json?.error || 'Erro ao iniciar correção.');
@@ -219,6 +239,17 @@ export default function AnalisePage({ params }: { params: { id: string } }) {
       setCorrectionError(err instanceof Error ? err.message : 'Erro inesperado.');
     }
   };
+
+  // Auto-selecionar cláusulas ausentes críticas quando análise completar
+  useEffect(() => {
+    if (!clausesInitialized && data?.result?.missing_clauses?.length) {
+      const criticalDescriptions = data.result.missing_clauses
+        .filter((c) => c.importance === 'critical')
+        .map((c) => c.description);
+      setSelectedMissingClauses(criticalDescriptions);
+      setClausesInitialized(true);
+    }
+  }, [data?.result?.missing_clauses, clausesInitialized]);
 
   // Salvar no histórico local quando análise completar
   useEffect(() => {
@@ -390,6 +421,19 @@ export default function AnalisePage({ params }: { params: { id: string } }) {
                 )}
               </div>
 
+              {/* Cláusulas ausentes */}
+              {!hasCorrectionResult && data.result.missing_clauses && data.result.missing_clauses.length > 0 && (
+                <MissingClausesSection
+                  clauses={data.result.missing_clauses}
+                  selected={selectedMissingClauses}
+                  onToggle={(desc) =>
+                    setSelectedMissingClauses((prev) =>
+                      prev.includes(desc) ? prev.filter((d) => d !== desc) : [...prev, desc]
+                    )
+                  }
+                />
+              )}
+
               {/* Correção do contrato */}
               {!hasCorrectionResult && (
                 <div id="correction-section" className="rounded-xl bg-brand-50 p-6 text-center">
@@ -419,6 +463,8 @@ export default function AnalisePage({ params }: { params: { id: string } }) {
                         <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                         Corrigindo contrato...
                       </span>
+                    ) : selectedMissingClauses.length > 0 ? (
+                      `Corrigir + incluir ${selectedMissingClauses.length} cláusula${selectedMissingClauses.length > 1 ? 's' : ''}`
                     ) : (
                       'Corrigir contrato gratuitamente'
                     )}
@@ -490,6 +536,75 @@ function formatContractType(type: string): string {
     outro: 'Outro',
   };
   return map[type] || type;
+}
+
+const IMPORTANCE_STYLES: Record<string, { badge: string; label: string }> = {
+  critical: { badge: 'bg-red-100 text-red-700', label: 'Crítico' },
+  recommended: { badge: 'bg-amber-100 text-amber-700', label: 'Recomendado' },
+  optional: { badge: 'bg-gray-100 text-gray-600', label: 'Opcional' },
+};
+
+function MissingClausesSection({
+  clauses,
+  selected,
+  onToggle,
+}: {
+  clauses: MissingClause[];
+  selected: string[];
+  onToggle: (desc: string) => void;
+}) {
+  return (
+    <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+      <div className="mb-3 flex items-center gap-2">
+        <svg className="h-4 w-4 shrink-0 text-blue-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+        </svg>
+        <h3 className="text-sm font-semibold text-blue-900">
+          Cláusulas ausentes ({clauses.length} identificada{clauses.length > 1 ? 's' : ''})
+        </h3>
+      </div>
+      <p className="mb-3 text-xs text-blue-700">
+        Seu contrato não possui estas proteções. Selecione as que deseja incluir na correção:
+      </p>
+      <div className="space-y-2">
+        {clauses.map((clause) => {
+          const isSelected = selected.includes(clause.description);
+          const style = IMPORTANCE_STYLES[clause.importance] ?? IMPORTANCE_STYLES.optional;
+          return (
+            <label
+              key={clause.description}
+              className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors ${
+                isSelected
+                  ? 'border-blue-300 bg-white'
+                  : 'border-transparent bg-blue-50 hover:bg-white/60'
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={isSelected}
+                onChange={() => onToggle(clause.description)}
+                className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 accent-blue-600"
+              />
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${style.badge}`}>
+                    {style.label}
+                  </span>
+                  <span className="text-sm font-medium text-gray-900">{clause.description}</span>
+                </div>
+                <p className="mt-0.5 text-xs text-gray-500">{clause.legal_basis}</p>
+              </div>
+            </label>
+          );
+        })}
+      </div>
+      {selected.length === 0 && (
+        <p className="mt-2 text-xs text-blue-600">
+          Nenhuma cláusula selecionada — o contrato será corrigido sem adições.
+        </p>
+      )}
+    </div>
+  );
 }
 
 const ACTION_COLORS: Record<string, string> = {
