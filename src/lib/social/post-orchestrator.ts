@@ -13,11 +13,15 @@ import {
   recordPost,
   resetPostedTopics,
 } from './state';
-import { isGeminiConfigured, generateSocialImage } from './gemini-image';
-import { uploadSocialImage } from './image-storage';
 import type { OrchestratorResult, MetaPostResult } from './types';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://contrato-seguro-inky.vercel.app';
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://wdsfemqjwgdfrqedvqyh.supabase.co';
+
+function getTemplateImageUrl(category: string): string {
+  const key = category.replace(/_/g, '_'); // já está correto
+  return `${SUPABASE_URL}/storage/v1/object/public/social-images/templates/social-${key}.png`;
+}
 
 const CATEGORY_LABELS: Record<string, string> = {
   aluguel: 'Contrato de Aluguel',
@@ -83,41 +87,10 @@ export async function runSocialPost(options?: {
   const post = await generateSocialPost(topic);
   console.log(`[Social] Post gerado: ${post.imageHeadline}`);
 
-  // 5. Gerar imagem (Gemini AI ou fallback next/og)
-  const imageId = `${topic.key}-${Date.now()}`;
-  let imageUrl: string;
-
-  if (isGeminiConfigured()) {
-    console.log('[Social] Gerando imagem com Gemini AI...');
-    const geminiImage = await generateSocialImage({
-      headline: post.imageHeadline,
-      category: topic.category,
-      categoryLabel: CATEGORY_LABELS[topic.category] || 'Dica Jurídica',
-      categoryEmoji: CATEGORY_EMOJIS[topic.category] || '📋',
-    });
-
-    if (geminiImage) {
-      const ext = geminiImage.mimeType.includes('png') ? 'png' : 'jpg';
-      const publicUrl = await uploadSocialImage({
-        data: geminiImage.data,
-        mimeType: geminiImage.mimeType,
-        filename: `${imageId}.${ext}`,
-      });
-
-      if (publicUrl) {
-        imageUrl = publicUrl;
-        console.log('[Social] Imagem Gemini publicada:', imageUrl);
-      } else {
-        console.warn('[Social] Falha no upload Gemini, usando fallback next/og');
-        imageUrl = `${APP_URL}/api/social/image/${encodeURIComponent(imageId)}?headline=${encodeURIComponent(post.imageHeadline)}&category=${encodeURIComponent(topic.category)}`;
-      }
-    } else {
-      console.warn('[Social] Gemini não gerou imagem, usando fallback next/og');
-      imageUrl = `${APP_URL}/api/social/image/${encodeURIComponent(imageId)}?headline=${encodeURIComponent(post.imageHeadline)}&category=${encodeURIComponent(topic.category)}`;
-    }
-  } else {
-    imageUrl = `${APP_URL}/api/social/image/${encodeURIComponent(imageId)}?headline=${encodeURIComponent(post.imageHeadline)}&category=${encodeURIComponent(topic.category)}`;
-  }
+  // 5. Definir URL da imagem (template por categoria no Supabase Storage)
+  // Templates pré-gerados garantem que Instagram sempre receba imagem válida
+  const imageUrl = getTemplateImageUrl(topic.category);
+  console.log('[Social] Imagem template:', imageUrl);
 
   // 6. Montar texto completo com hashtags
   const fullCaption = `${post.text}\n\n${post.hashtags.join(' ')}`;
