@@ -149,6 +149,175 @@ export async function postToInstagram(params: {
 }
 
 /**
+ * Publica um carrossel de imagens no Instagram Business (3 etapas).
+ * Etapa 1: Cria containers filhos para cada imagem
+ * Etapa 2: Cria container de carrossel referenciando os filhos
+ * Etapa 3: Publica o carrossel
+ */
+export async function postCarouselToInstagram(params: {
+  caption: string;
+  imageUrls: string[];
+}): Promise<MetaPostResult> {
+  const { token, igUserId } = getConfig();
+
+  if (!igUserId) {
+    return { id: '', success: false, error: 'META_IG_USER_ID não configurado' };
+  }
+
+  if (params.imageUrls.length < 2 || params.imageUrls.length > 10) {
+    return { id: '', success: false, error: 'Carrossel requer entre 2 e 10 imagens' };
+  }
+
+  try {
+    // Etapa 1: Criar containers filhos
+    const childIds: string[] = [];
+
+    for (const imageUrl of params.imageUrls) {
+      const childRes = await fetch(`${GRAPH_API}/${igUserId}/media`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          access_token: token,
+          image_url: imageUrl,
+          is_carousel_item: true,
+        }),
+      });
+
+      const childData = await childRes.json();
+
+      if (!childRes.ok || !childData.id) {
+        const errorMsg = childData.error?.message || `HTTP ${childRes.status}`;
+        console.error('[Social] Erro Instagram (criar filho carrossel):', errorMsg);
+        return { id: '', success: false, error: `Falha no filho ${childIds.length + 1}: ${errorMsg}` };
+      }
+
+      childIds.push(childData.id);
+    }
+
+    // Etapa 2: Criar container de carrossel
+    const carouselRes = await fetch(`${GRAPH_API}/${igUserId}/media`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        access_token: token,
+        media_type: 'CAROUSEL',
+        children: childIds.join(','),
+        caption: params.caption,
+      }),
+    });
+
+    const carouselData = await carouselRes.json();
+
+    if (!carouselRes.ok || !carouselData.id) {
+      const errorMsg = carouselData.error?.message || `HTTP ${carouselRes.status}`;
+      console.error('[Social] Erro Instagram (criar carrossel):', errorMsg);
+      return { id: '', success: false, error: errorMsg };
+    }
+
+    const creationId = carouselData.id;
+
+    // Etapa 3: Publicar (com retry por MEDIA_NOT_READY)
+    for (let attempt = 1; attempt <= 4; attempt++) {
+      await new Promise((resolve) => setTimeout(resolve, attempt * 5000));
+
+      const publishRes = await fetch(`${GRAPH_API}/${igUserId}/media_publish`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          access_token: token,
+          creation_id: creationId,
+        }),
+      });
+
+      const publishData = await publishRes.json();
+
+      if (publishRes.ok && publishData.id) {
+        return { id: publishData.id, success: true };
+      }
+
+      const errorMsg = publishData.error?.message || '';
+      console.warn(`[Social] Instagram carrossel tentativa ${attempt}/4:`, errorMsg);
+
+      if (!errorMsg.toLowerCase().includes('not ready') && !errorMsg.includes('MEDIA_NOT_READY')) {
+        return { id: '', success: false, error: errorMsg };
+      }
+    }
+
+    return { id: '', success: false, error: 'Instagram: carrossel não ficou pronto após 4 tentativas' };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Erro desconhecido';
+    console.error('[Social] Erro Instagram carrossel:', msg);
+    return { id: '', success: false, error: msg };
+  }
+}
+
+/**
+ * Publica um álbum de imagens no Facebook (post com múltiplas fotos).
+ * Etapa 1: Faz upload de cada foto (published: false)
+ * Etapa 2: Cria post no feed com as fotos anexadas
+ */
+export async function postAlbumToFacebook(params: {
+  message: string;
+  imageUrls: string[];
+}): Promise<MetaPostResult> {
+  const { token, pageId } = getConfig();
+
+  try {
+    // Etapa 1: Upload das fotos como não publicadas
+    const photoIds: string[] = [];
+
+    for (const imageUrl of params.imageUrls) {
+      const photoRes = await fetch(`${GRAPH_API}/${pageId}/photos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          access_token: token,
+          url: imageUrl,
+          published: false,
+        }),
+      });
+
+      const photoData = await photoRes.json();
+
+      if (!photoRes.ok || !photoData.id) {
+        const errorMsg = photoData.error?.message || `HTTP ${photoRes.status}`;
+        console.error('[Social] Erro Facebook (upload foto):', errorMsg);
+        return { id: '', success: false, error: `Falha na foto ${photoIds.length + 1}: ${errorMsg}` };
+      }
+
+      photoIds.push(photoData.id);
+    }
+
+    // Etapa 2: Criar post no feed com fotos anexadas
+    const attachedMedia = photoIds.map((id) => ({ media_fbid: id }));
+
+    const feedRes = await fetch(`${GRAPH_API}/${pageId}/feed`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        access_token: token,
+        message: params.message,
+        attached_media: attachedMedia,
+      }),
+    });
+
+    const feedData = await feedRes.json();
+
+    if (!feedRes.ok || !feedData.id) {
+      const errorMsg = feedData.error?.message || `HTTP ${feedRes.status}`;
+      console.error('[Social] Erro Facebook (publicar álbum):', errorMsg);
+      return { id: '', success: false, error: errorMsg };
+    }
+
+    return { id: feedData.id, success: true };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Erro desconhecido';
+    console.error('[Social] Erro Facebook álbum:', msg);
+    return { id: '', success: false, error: msg };
+  }
+}
+
+/**
  * Publica um post de texto no Threads.
  * Requer token OAuth separado (graph.threads.net).
  *

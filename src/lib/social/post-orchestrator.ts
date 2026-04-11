@@ -12,11 +12,12 @@
  */
 
 import { pickNextTopic, TOPIC_BANK } from './topics';
-import { generateSocialPost } from './content-generator';
-import { postToFacebook, postToInstagram, postToThreads, isMetaConfigured } from './meta-client';
+import { generateCarouselPost } from './content-generator';
+import { postToThreads, postCarouselToInstagram, postAlbumToFacebook, isMetaConfigured } from './meta-client';
 import { postToTelegram, isTelegramConfigured } from './telegram-client';
 import { postToLinkedIn, isLinkedInConfigured } from './linkedin-client';
 import { sendNewsletter, isBrevoConfigured, buildNewsletterHtml } from './brevo-client';
+import { uploadSocialImage } from './image-storage';
 import {
   hasPostedToday,
   getPostedTopics,
@@ -24,12 +25,92 @@ import {
   recordPost,
   resetPostedTopics,
 } from './state';
-import type { OrchestratorResult, MetaPostResult, SocialPostResult } from './types';
+import type { OrchestratorResult, MetaPostResult, SocialPostResult, CarouselPost } from './types';
 
 const APP_URL = (process.env.NEXT_PUBLIC_APP_URL || 'https://contrato-seguro-inky.vercel.app').trim();
 
-function getTemplateImageUrl(category: string): string {
-  return `${APP_URL}/brand/social-templates/social-${category}.png`;
+/**
+ * Gera a URL para um slide do carrossel via next/og.
+ */
+function buildSlideImageUrl(params: Record<string, string>): string {
+  const qs = new URLSearchParams(params).toString();
+  return `${APP_URL}/api/social/image/carousel?${qs}`;
+}
+
+/**
+ * Busca uma imagem de slide e faz upload para Supabase.
+ * Retorna a URL pública limpa para a Meta API.
+ */
+async function fetchAndUploadSlide(slideUrl: string, filename: string): Promise<string | null> {
+  try {
+    const res = await fetch(slideUrl);
+    if (!res.ok) {
+      console.warn(`[Social] Falha ao gerar slide ${filename}: HTTP ${res.status}`);
+      return null;
+    }
+    const buffer = Buffer.from(await res.arrayBuffer());
+    return uploadSocialImage({ data: buffer, mimeType: 'image/png', filename });
+  } catch (err) {
+    console.warn(`[Social] Erro ao processar slide ${filename}:`, err);
+    return null;
+  }
+}
+
+/**
+ * Gera e faz upload de todos os slides de um carrossel.
+ * Retorna array com as URLs públicas.
+ */
+async function buildCarouselImages(carousel: CarouselPost): Promise<string[]> {
+  const total = carousel.slides.length + 2; // cover + items + cta
+  const timestamp = Date.now();
+
+  const slideConfigs: Array<{ params: Record<string, string>; filename: string }> = [
+    // Slide de capa
+    {
+      params: {
+        type: 'cover',
+        title: carousel.coverTitle,
+        subtitle: carousel.coverSubtitle,
+        current: '0',
+        total: String(total),
+      },
+      filename: `carousel-${timestamp}-0-cover.png`,
+    },
+    // Slides de conteúdo
+    ...carousel.slides.map((slide, i) => ({
+      params: {
+        type: 'item',
+        number: String(i + 1),
+        title: slide.title,
+        description: slide.description,
+        law: slide.law,
+        current: String(i + 1),
+        total: String(total),
+      },
+      filename: `carousel-${timestamp}-${i + 1}-item.png`,
+    })),
+    // Slide de CTA
+    {
+      params: {
+        type: 'cta',
+        current: String(total - 1),
+        total: String(total),
+      },
+      filename: `carousel-${timestamp}-${total - 1}-cta.png`,
+    },
+  ];
+
+  const urls: string[] = [];
+  for (const config of slideConfigs) {
+    const url = await fetchAndUploadSlide(buildSlideImageUrl(config.params), config.filename);
+    if (url) {
+      urls.push(url);
+    } else {
+      console.warn(`[Social] Slide ${config.filename} não gerado — pulando`);
+    }
+  }
+
+  return urls;
 }
 
 /**
@@ -79,42 +160,52 @@ export async function runSocialPost(options?: {
   const topic = pickNextTopic(postedTopics, lastCategory);
   console.log(`[Social] Tema: ${topic.key} (${topic.category}/${topic.type})`);
 
-  // 4. Gerar conteúdo
-  const post = await generateSocialPost(topic);
-  console.log(`[Social] Post gerado: ${post.imageHeadline}`);
+  // 4. Gerar conteúdo em formato carrossel
+  const carousel = await generateCarouselPost(topic);
+  console.log(`[Social] Carrossel gerado: "${carousel.coverTitle}" (${carousel.slides.length} slides)`);
 
-  // 5. Definir imagem e caption
-  const imageUrl = getTemplateImageUrl(topic.category);
-  const fullCaption = `${post.text}\n\n${post.hashtags.join(' ')}`;
+  const fullCaption = carousel.caption;
 
   if (dryRun) {
     console.log('[Social] DRY RUN — não publicando.');
-    console.log('[Social] Texto:', fullCaption);
-    console.log('[Social] Imagem:', imageUrl);
+    console.log('[Social] Caption:', fullCaption);
     return { success: true, topicKey: topic.key };
   }
+
+  // 5. Gerar e fazer upload das imagens do carrossel
+  console.log('[Social] Gerando slides...');
+  const carouselImageUrls = await buildCarouselImages(carousel);
+  console.log(`[Social] ${carouselImageUrls.length} slides prontos`);
+
+  // Fallback: se não gerou slides suficientes para carrossel (min 2), usar URL simples
+  const hasCarousel = carouselImageUrls.length >= 2;
+  const firstImageUrl = carouselImageUrls[0] || `${APP_URL}/api/social/image/placeholder?category=${topic.category}`;
 
   // 6. Publicar em paralelo em todos os canais configurados
   const [fbResult, igResult, threadsResult, telegramResult, linkedInResult] =
     await Promise.all([
-      // Facebook — link preview
+      // Facebook — álbum com todos os slides do carrossel
       metaConfig.facebook
-        ? postToFacebook({ message: fullCaption, link: APP_URL })
+        ? (hasCarousel
+            ? postAlbumToFacebook({ message: fullCaption, imageUrls: carouselImageUrls })
+            : Promise.resolve({ id: '', success: false, error: 'slides insuficientes' } as MetaPostResult))
         : Promise.resolve(undefined as MetaPostResult | undefined),
 
-      // Instagram — imagem + caption
+      // Instagram — carrossel
       metaConfig.instagram
-        ? postToInstagram({ caption: fullCaption, imageUrl })
+        ? (hasCarousel
+            ? postCarouselToInstagram({ caption: fullCaption, imageUrls: carouselImageUrls })
+            : Promise.resolve({ id: '', success: false, error: 'slides insuficientes' } as MetaPostResult))
         : Promise.resolve(undefined as MetaPostResult | undefined),
 
-      // Threads — texto + imagem (opcional)
+      // Threads — primeiro slide + caption
       metaConfig.threads
-        ? postToThreads({ text: fullCaption, imageUrl })
+        ? postToThreads({ text: fullCaption, imageUrl: firstImageUrl })
         : Promise.resolve(undefined as MetaPostResult | undefined),
 
-      // Telegram — imagem + caption
+      // Telegram — primeiro slide + caption
       telegramOk
-        ? postToTelegram({ text: fullCaption, imageUrl })
+        ? postToTelegram({ text: fullCaption, imageUrl: firstImageUrl })
         : Promise.resolve(undefined as SocialPostResult | undefined),
 
       // LinkedIn — texto + link para o site
@@ -127,13 +218,13 @@ export async function runSocialPost(options?: {
   let newsletterResult: SocialPostResult | undefined;
   if (brevoOk) {
     const htmlContent = buildNewsletterHtml({
-      text: post.text,
-      hashtags: post.hashtags,
-      imageUrl,
+      text: carousel.caption,
+      hashtags: [],
+      imageUrl: firstImageUrl,
       appUrl: APP_URL,
     });
     newsletterResult = await sendNewsletter({
-      subject: `💡 ${post.imageHeadline} — ContratoSeguro`,
+      subject: `💡 ${carousel.imageHeadline} — ContratoSeguro`,
       htmlContent,
     });
   }

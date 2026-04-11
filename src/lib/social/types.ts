@@ -31,6 +31,22 @@ export type GeneratedPost = {
   imageHeadline: string;
 };
 
+/** Dados de um slide individual para carrossel */
+export type CarouselSlide = {
+  title: string;
+  description: string;
+  law: string;
+};
+
+/** Post completo em formato carrossel */
+export type CarouselPost = {
+  caption: string;
+  coverTitle: string;
+  coverSubtitle: string;
+  slides: CarouselSlide[];
+  imageHeadline: string;
+};
+
 export type PostHistoryEntry = {
   date: string;
   topicKey: string;
