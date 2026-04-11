@@ -26,7 +26,9 @@ export async function GET(request: NextRequest) {
 
   try {
     const result = await runSocialPost({ dryRun, force });
-    return NextResponse.json({ status: 'ok', ...result, dryRun });
+    return NextResponse.json({ status: 'ok', ...result, dryRun }, {
+      headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' },
+    });
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Erro desconhecido';
     console.error('[Social Cron] Erro fatal:', err);
