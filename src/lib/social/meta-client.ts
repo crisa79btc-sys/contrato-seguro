@@ -149,9 +149,90 @@ export async function postToInstagram(params: {
 }
 
 /**
+ * Publica um post de texto no Threads.
+ * Requer token OAuth separado (graph.threads.net).
+ *
+ * Setup:
+ * 1. No app Meta, adicionar o produto "Threads API"
+ * 2. OAuth via https://www.threads.net/oauth/authorize
+ *    Escopos: threads_basic, threads_content_publish
+ * 3. Configurar no Vercel: META_THREADS_ACCESS_TOKEN e META_THREADS_USER_ID
+ */
+export async function postToThreads(params: {
+  text: string;
+  imageUrl?: string;
+}): Promise<MetaPostResult> {
+  const token = process.env.META_THREADS_ACCESS_TOKEN;
+  const userId = process.env.META_THREADS_USER_ID;
+
+  if (!token || !userId) {
+    return { id: '', success: false, error: 'META_THREADS_ACCESS_TOKEN ou META_THREADS_USER_ID não configurado' };
+  }
+
+  const THREADS_API = 'https://graph.threads.net/v1.0';
+
+  try {
+    // Etapa 1: Criar container
+    const createBody = new URLSearchParams({
+      access_token: token,
+      media_type: params.imageUrl ? 'IMAGE' : 'TEXT',
+      text: params.text,
+    });
+
+    if (params.imageUrl) {
+      createBody.append('image_url', params.imageUrl);
+    }
+
+    const createResponse = await fetch(`${THREADS_API}/${userId}/threads`, {
+      method: 'POST',
+      body: createBody.toString(),
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    });
+
+    const createData = await createResponse.json();
+
+    if (!createResponse.ok) {
+      const errorMsg = createData.error?.message || `HTTP ${createResponse.status}`;
+      console.error('[Social] Erro Threads (criar):', errorMsg);
+      return { id: '', success: false, error: errorMsg };
+    }
+
+    const creationId = createData.id;
+
+    // Etapa 2: Publicar
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    const publishBody = new URLSearchParams({
+      access_token: token,
+      creation_id: creationId,
+    });
+
+    const publishResponse = await fetch(`${THREADS_API}/${userId}/threads_publish`, {
+      method: 'POST',
+      body: publishBody.toString(),
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    });
+
+    const publishData = await publishResponse.json();
+
+    if (publishResponse.ok && publishData.id) {
+      return { id: publishData.id, success: true };
+    }
+
+    const errorMsg = publishData.error?.message || `HTTP ${publishResponse.status}`;
+    console.error('[Social] Erro Threads (publicar):', errorMsg);
+    return { id: '', success: false, error: errorMsg };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Erro desconhecido';
+    console.error('[Social] Erro Threads:', msg);
+    return { id: '', success: false, error: msg };
+  }
+}
+
+/**
  * Verifica se as credenciais Meta estão configuradas.
  */
-export function isMetaConfigured(): { facebook: boolean; instagram: boolean } {
+export function isMetaConfigured(): { facebook: boolean; instagram: boolean; threads: boolean } {
   return {
     facebook: !!(process.env.META_PAGE_ACCESS_TOKEN && process.env.META_PAGE_ID),
     instagram: !!(
@@ -159,5 +240,6 @@ export function isMetaConfigured(): { facebook: boolean; instagram: boolean } {
       process.env.META_PAGE_ID &&
       process.env.META_IG_USER_ID
     ),
+    threads: !!(process.env.META_THREADS_ACCESS_TOKEN && process.env.META_THREADS_USER_ID),
   };
 }

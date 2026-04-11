@@ -1,11 +1,22 @@
 /**
  * Orquestrador principal do módulo de automação social.
- * Fluxo: escolher tema → gerar conteúdo → gerar imagem → publicar → registrar.
+ * Fluxo: escolher tema → gerar conteúdo → publicar em todos os canais → registrar.
+ *
+ * Canais suportados:
+ * - Facebook (Meta Graph API) — token: META_PAGE_ACCESS_TOKEN + META_PAGE_ID
+ * - Instagram (Meta Graph API) — token: META_PAGE_ACCESS_TOKEN + META_IG_USER_ID
+ * - Threads (graph.threads.net) — token: META_THREADS_ACCESS_TOKEN + META_THREADS_USER_ID
+ * - Telegram (Bot API) — token: TELEGRAM_BOT_TOKEN + TELEGRAM_CHANNEL_ID
+ * - LinkedIn (Marketing API) — token: LINKEDIN_ACCESS_TOKEN + LINKEDIN_ORGANIZATION_ID
+ * - Newsletter (Brevo) — token: BREVO_API_KEY + BREVO_LIST_ID
  */
 
 import { pickNextTopic, TOPIC_BANK } from './topics';
 import { generateSocialPost } from './content-generator';
-import { postToFacebook, postToInstagram, isMetaConfigured } from './meta-client';
+import { postToFacebook, postToInstagram, postToThreads, isMetaConfigured } from './meta-client';
+import { postToTelegram, isTelegramConfigured } from './telegram-client';
+import { postToLinkedIn, isLinkedInConfigured } from './linkedin-client';
+import { sendNewsletter, isBrevoConfigured, buildNewsletterHtml } from './brevo-client';
 import {
   hasPostedToday,
   getPostedTopics,
@@ -13,36 +24,17 @@ import {
   recordPost,
   resetPostedTopics,
 } from './state';
-import type { OrchestratorResult, MetaPostResult } from './types';
+import type { OrchestratorResult, MetaPostResult, SocialPostResult } from './types';
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://contrato-seguro-inky.vercel.app';
+const APP_URL = (process.env.NEXT_PUBLIC_APP_URL || 'https://contrato-seguro-inky.vercel.app').trim();
+
 function getTemplateImageUrl(category: string): string {
   return `${APP_URL}/brand/social-templates/social-${category}.png`;
 }
 
-const CATEGORY_LABELS: Record<string, string> = {
-  aluguel: 'Contrato de Aluguel',
-  trabalho: 'Contrato de Trabalho',
-  servico: 'Prestação de Serviço',
-  compra_venda: 'Compra e Venda',
-  consumidor: 'Direito do Consumidor',
-  digital: 'Contratos Digitais',
-  geral: 'Dica Jurídica',
-};
-
-const CATEGORY_EMOJIS: Record<string, string> = {
-  aluguel: '🏠',
-  trabalho: '💼',
-  servico: '🔧',
-  compra_venda: '🚗',
-  consumidor: '🛒',
-  digital: '💻',
-  geral: '📋',
-};
-
 /**
- * Executa o ciclo completo de geração e publicação.
- * Chamado pelo Vercel Cron diariamente.
+ * Executa o ciclo completo de geração e publicação em todos os canais configurados.
+ * Chamado pelo Vercel Cron diariamente às 9h BRT (12:00 UTC).
  */
 export async function runSocialPost(options?: {
   dryRun?: boolean;
@@ -61,9 +53,17 @@ export async function runSocialPost(options?: {
     }
   }
 
-  // 2. Verificar credenciais
-  const configured = isMetaConfigured();
-  if (!configured.facebook && !configured.instagram) {
+  // 2. Verificar se há ao menos um canal configurado
+  const metaConfig = isMetaConfigured();
+  const telegramOk = isTelegramConfigured();
+  const linkedInOk = isLinkedInConfigured();
+  const brevoOk = isBrevoConfigured();
+
+  const anyConfigured =
+    metaConfig.facebook || metaConfig.instagram || metaConfig.threads ||
+    telegramOk || linkedInOk || brevoOk;
+
+  if (!anyConfigured) {
     return { success: false, topicKey: 'none', error: 'Nenhuma rede social configurada' };
   }
 
@@ -71,24 +71,20 @@ export async function runSocialPost(options?: {
   let postedTopics = await getPostedTopics();
   const lastCategory = await getLastCategory();
 
-  // Se todos os temas foram postados, resetar
   if (postedTopics.length >= TOPIC_BANK.length) {
     await resetPostedTopics();
     postedTopics = [];
   }
 
   const topic = pickNextTopic(postedTopics, lastCategory);
-  console.log(`[Social] Tema escolhido: ${topic.key} (${topic.category}/${topic.type})`);
+  console.log(`[Social] Tema: ${topic.key} (${topic.category}/${topic.type})`);
 
   // 4. Gerar conteúdo
   const post = await generateSocialPost(topic);
   console.log(`[Social] Post gerado: ${post.imageHeadline}`);
 
-  // 5. Definir URL da imagem (template por categoria no Vercel static)
+  // 5. Definir imagem e caption
   const imageUrl = getTemplateImageUrl(topic.category);
-  console.log('[Social] Imagem template:', imageUrl);
-
-  // 6. Montar texto completo com hashtags
   const fullCaption = `${post.text}\n\n${post.hashtags.join(' ')}`;
 
   if (dryRun) {
@@ -98,33 +94,67 @@ export async function runSocialPost(options?: {
     return { success: true, topicKey: topic.key };
   }
 
-  // 7. Publicar no Facebook
-  // Estratégia: postar como link preview (Facebook busca a OG image do site automaticamente).
-  // Evita o problema de Facebook tentar buscar imagem de URL com parâmetros longos.
-  let fbResult: MetaPostResult | undefined;
-  if (configured.facebook) {
-    console.log('[Social] Publicando no Facebook...');
-    fbResult = await postToFacebook({
-      message: fullCaption,
-      link: APP_URL,
-    });
-    console.log('[Social] Facebook:', fbResult.success ? `OK (${fbResult.id})` : `ERRO: ${fbResult.error}`);
-  }
+  // 6. Publicar em paralelo em todos os canais configurados
+  const [fbResult, igResult, threadsResult, telegramResult, linkedInResult] =
+    await Promise.all([
+      // Facebook — link preview
+      metaConfig.facebook
+        ? postToFacebook({ message: fullCaption, link: APP_URL })
+        : Promise.resolve(undefined as MetaPostResult | undefined),
 
-  // 8. Publicar no Instagram
-  let igResult: MetaPostResult | undefined;
-  if (configured.instagram) {
-    console.log('[Social] Publicando no Instagram...');
-    igResult = await postToInstagram({
-      caption: fullCaption,
+      // Instagram — imagem + caption
+      metaConfig.instagram
+        ? postToInstagram({ caption: fullCaption, imageUrl })
+        : Promise.resolve(undefined as MetaPostResult | undefined),
+
+      // Threads — texto + imagem (opcional)
+      metaConfig.threads
+        ? postToThreads({ text: fullCaption, imageUrl })
+        : Promise.resolve(undefined as MetaPostResult | undefined),
+
+      // Telegram — imagem + caption
+      telegramOk
+        ? postToTelegram({ text: fullCaption, imageUrl })
+        : Promise.resolve(undefined as SocialPostResult | undefined),
+
+      // LinkedIn — texto + link para o site
+      linkedInOk
+        ? postToLinkedIn({ text: fullCaption, url: APP_URL })
+        : Promise.resolve(undefined as SocialPostResult | undefined),
+    ]);
+
+  // 7. Newsletter (separada — envolve geração de HTML)
+  let newsletterResult: SocialPostResult | undefined;
+  if (brevoOk) {
+    const htmlContent = buildNewsletterHtml({
+      text: post.text,
+      hashtags: post.hashtags,
       imageUrl,
+      appUrl: APP_URL,
     });
-    console.log('[Social] Instagram:', igResult.success ? `OK (${igResult.id})` : `ERRO: ${igResult.error}`);
+    newsletterResult = await sendNewsletter({
+      subject: `💡 ${post.imageHeadline} — ContratoSeguro`,
+      htmlContent,
+    });
   }
 
-  const anySuccess = (fbResult?.success ?? false) || (igResult?.success ?? false);
+  // 8. Log dos resultados
+  if (fbResult) console.log('[Social] Facebook:', fbResult.success ? `OK (${fbResult.id})` : `ERRO: ${fbResult.error}`);
+  if (igResult) console.log('[Social] Instagram:', igResult.success ? `OK (${igResult.id})` : `ERRO: ${igResult.error}`);
+  if (threadsResult) console.log('[Social] Threads:', threadsResult.success ? `OK (${threadsResult.id})` : `ERRO: ${threadsResult.error}`);
+  if (telegramResult) console.log('[Social] Telegram:', telegramResult.success ? `OK (${telegramResult.id})` : `ERRO: ${telegramResult.error}`);
+  if (linkedInResult) console.log('[Social] LinkedIn:', linkedInResult.success ? `OK (${linkedInResult.id})` : `ERRO: ${linkedInResult.error}`);
+  if (newsletterResult) console.log('[Social] Newsletter:', newsletterResult.success ? `OK (${newsletterResult.id})` : `ERRO: ${newsletterResult.error}`);
 
-  // 9. Registrar no estado apenas se ao menos uma publicação teve sucesso
+  const anySuccess =
+    (fbResult?.success ?? false) ||
+    (igResult?.success ?? false) ||
+    (threadsResult?.success ?? false) ||
+    (telegramResult?.success ?? false) ||
+    (linkedInResult?.success ?? false) ||
+    (newsletterResult?.success ?? false);
+
+  // 9. Registrar no estado
   if (anySuccess) {
     const today = new Date().toISOString().split('T')[0];
     await recordPost({
@@ -132,13 +162,9 @@ export async function runSocialPost(options?: {
       topicKey: topic.key,
       fbPostId: fbResult?.success ? fbResult.id : undefined,
       igPostId: igResult?.success ? igResult.id : undefined,
-      error:
-        (!fbResult?.success && fbResult?.error) || (!igResult?.success && igResult?.error)
-          ? `FB: ${fbResult?.error || 'ok'} | IG: ${igResult?.error || 'ok'}`
-          : undefined,
     });
   } else {
-    console.error('[Social] Nenhuma rede publicou com sucesso — estado NÃO registrado para permitir retry.');
+    console.error('[Social] Nenhum canal publicou com sucesso — estado NÃO registrado para permitir retry.');
   }
 
   return {
@@ -146,5 +172,9 @@ export async function runSocialPost(options?: {
     topicKey: topic.key,
     facebook: fbResult,
     instagram: igResult,
+    threads: threadsResult,
+    telegram: telegramResult,
+    linkedin: linkedInResult,
+    newsletter: newsletterResult,
   };
 }

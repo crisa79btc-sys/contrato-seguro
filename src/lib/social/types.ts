@@ -45,10 +45,20 @@ export type MetaPostResult = {
   error?: string;
 };
 
+export type SocialPostResult = {
+  success: boolean;
+  id?: string;
+  error?: string;
+};
+
 export type OrchestratorResult = {
   success: boolean;
   topicKey: string;
   facebook?: MetaPostResult;
   instagram?: MetaPostResult;
+  threads?: SocialPostResult;
+  telegram?: SocialPostResult;
+  linkedin?: SocialPostResult;
+  newsletter?: SocialPostResult;
   error?: string;
 };
