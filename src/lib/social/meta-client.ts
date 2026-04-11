@@ -86,6 +86,10 @@ export async function postToInstagram(params: {
   try {
     // Etapa 1: Criar container
     const createUrl = `${GRAPH_API}/${igUserId}/media`;
+    console.log('[Instagram] igUserId:', igUserId);
+    console.log('[Instagram] imageUrl:', params.imageUrl);
+    console.log('[Instagram] caption length:', params.caption.length);
+
     const createBody = new URLSearchParams({
       access_token: token,
       image_url: params.imageUrl,
@@ -99,6 +103,7 @@ export async function postToInstagram(params: {
     });
 
     const createData = await createResponse.json();
+    console.log('[Instagram] container response:', JSON.stringify(createData));
 
     if (!createResponse.ok) {
       const errorMsg = createData.error?.message || `HTTP ${createResponse.status}`;
