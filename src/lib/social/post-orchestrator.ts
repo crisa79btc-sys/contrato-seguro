@@ -16,11 +16,8 @@ import {
 import type { OrchestratorResult, MetaPostResult } from './types';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://contrato-seguro-inky.vercel.app';
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://wdsfemqjwgdfrqedvqyh.supabase.co';
-
 function getTemplateImageUrl(category: string): string {
-  const key = category.replace(/_/g, '_'); // já está correto
-  return `${SUPABASE_URL}/storage/v1/object/public/social-images/templates/social-${key}.png`;
+  return `${APP_URL}/brand/social-templates/social-${category}.png`;
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
