@@ -46,16 +46,35 @@ export default function Home() {
       <Header />
 
       <main className="flex-1">
-        {/* Hero Section */}
-        <section className="px-4 pb-16 pt-12 sm:pt-20">
-          <div className="mx-auto max-w-3xl text-center">
-            <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 sm:text-5xl">
+        {/* Hero Section — dark gradient */}
+        <section className="hero-gradient relative overflow-hidden px-4 pb-20 pt-16 sm:pt-24">
+          {/* Glow overlay */}
+          <div className="hero-glow pointer-events-none absolute inset-0" />
+
+          {/* Decorative grid */}
+          <div
+            className="pointer-events-none absolute inset-0 opacity-[0.04]"
+            style={{
+              backgroundImage:
+                'linear-gradient(rgba(167,139,250,1) 1px, transparent 1px), linear-gradient(90deg, rgba(167,139,250,1) 1px, transparent 1px)',
+              backgroundSize: '48px 48px',
+            }}
+          />
+
+          <div className="relative mx-auto max-w-3xl text-center">
+            {/* Badge */}
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-violet-500/30 bg-violet-500/10 px-4 py-1.5 text-xs font-medium text-violet-300">
+              <span className="h-1.5 w-1.5 rounded-full bg-violet-400" />
+              Análise com Inteligência Artificial · 100% gratuito
+            </div>
+
+            <h1 className="text-3xl font-extrabold tracking-tight text-white sm:text-5xl sm:leading-[1.15]">
               Seu contrato tem{' '}
-              <span className="text-brand-600">cláusulas abusivas</span>?
+              <span className="text-gradient">cláusulas abusivas</span>?
             </h1>
-            <p className="mx-auto mt-4 max-w-xl text-base text-gray-600 sm:text-lg">
-              Descubra em minutos. Faça upload do seu contrato e receba uma análise gratuita com
-              inteligência artificial.
+            <p className="mx-auto mt-5 max-w-xl text-base text-slate-400 sm:text-lg">
+              Descubra em minutos. Faça upload do seu contrato e receba uma análise gratuita
+              fundamentada na legislação brasileira.
             </p>
 
             <div className="mt-10">
@@ -66,22 +85,24 @@ export default function Home() {
               />
             </div>
 
-            <div className="mt-6 flex items-center justify-center gap-6 text-xs text-gray-400">
-              <span className="flex items-center gap-1">
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <div className="mt-6 flex items-center justify-center gap-6 text-xs text-slate-500">
+              <span className="flex items-center gap-1.5">
+                <svg className="h-3.5 w-3.5 text-violet-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
                 </svg>
-                Seus dados são criptografados
+                Dados criptografados
               </span>
-              <span className="flex items-center gap-1">
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <span className="text-slate-700">·</span>
+              <span className="flex items-center gap-1.5">
+                <svg className="h-3.5 w-3.5 text-violet-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                 </svg>
                 Excluído em 7 dias
               </span>
-              <span className="flex items-center gap-1">
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 0 1-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 0 1 4.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0 1 12 15a9.065 9.065 0 0 0-6.23.693L5 14.5m14.8.8 1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0 1 12 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
+              <span className="text-slate-700">·</span>
+              <span className="flex items-center gap-1.5">
+                <svg className="h-3.5 w-3.5 text-violet-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                 </svg>
                 Análise gratuita
               </span>
@@ -92,33 +113,10 @@ export default function Home() {
         {/* Histórico Recente */}
         <RecentAnalyses />
 
-        {/* Social Proof */}
-        <section className="border-y border-gray-100 bg-gray-50/50 px-4 py-12">
+        {/* Social Proof / Trust badges */}
+        <section className="border-y border-slate-100 bg-white px-4 py-12">
           <div className="mx-auto max-w-4xl">
-            {/* Trust bar */}
-            <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-gray-500 sm:gap-10">
-              <span className="flex items-center gap-2">
-                <svg className="h-5 w-5 text-brand-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 0 0-2.455 2.456Z" />
-                </svg>
-                Protegido por IA
-              </span>
-              <span className="flex items-center gap-2">
-                <svg className="h-5 w-5 text-brand-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
-                </svg>
-                Dados criptografados
-              </span>
-              <span className="flex items-center gap-2">
-                <svg className="h-5 w-5 text-brand-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                </svg>
-                100% gratuito na análise
-              </span>
-            </div>
-
-            {/* Badges reais */}
-            <div className="mt-10 grid gap-4 sm:grid-cols-3">
+            <div className="mt-0 grid gap-4 sm:grid-cols-3">
               <TrustBadge
                 title="Powered by Claude AI"
                 description="IA da Anthropic, líder mundial em segurança e confiabilidade"
@@ -139,7 +137,7 @@ export default function Home() {
         </section>
 
         {/* Como Funciona */}
-        <section className="bg-gray-50 px-4 py-16">
+        <section className="bg-slate-50 px-4 py-16">
           <div className="mx-auto max-w-4xl">
             <h2 className="text-center text-2xl font-bold text-gray-900 sm:text-3xl">
               Como funciona
@@ -238,7 +236,7 @@ export default function Home() {
         </section>
 
         {/* FAQ */}
-        <section className="bg-gray-50 px-4 py-16">
+        <section className="bg-slate-50 px-4 py-16">
           <div className="mx-auto max-w-3xl">
             <h2 className="text-center text-2xl font-bold text-gray-900 sm:text-3xl">
               Perguntas frequentes
@@ -265,18 +263,25 @@ export default function Home() {
         </section>
 
         {/* CTA Final */}
-        <section className="px-4 py-16">
-          <div className="mx-auto max-w-2xl text-center">
+        <section className="relative overflow-hidden px-4 py-20">
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              background:
+                'radial-gradient(ellipse 70% 80% at 50% 50%, rgba(124,58,237,0.08), transparent)',
+            }}
+          />
+          <div className="relative mx-auto max-w-2xl text-center">
             <h2 className="text-2xl font-bold text-gray-900 sm:text-3xl">
               Analise seu contrato agora
             </h2>
-            <p className="mt-3 text-gray-600">
+            <p className="mt-3 text-gray-500">
               É gratuito, rápido e pode evitar prejuízos de milhares de reais.
             </p>
             <div className="mt-8">
               <button
                 onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                className="rounded-xl bg-brand-600 px-8 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-600/25 transition-all hover:bg-brand-700 hover:shadow-xl hover:shadow-brand-600/30 active:scale-95"
+                className="rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 px-8 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-600/30 transition-all hover:shadow-xl hover:shadow-brand-600/40 active:scale-95"
               >
                 Fazer upload do contrato
               </button>
