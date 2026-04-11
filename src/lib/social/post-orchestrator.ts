@@ -87,8 +87,6 @@ export async function runSocialPost(options?: {
   // 5. Definir URL da imagem (template por categoria no Vercel static)
   const imageUrl = getTemplateImageUrl(topic.category);
   console.log('[Social] Imagem template:', imageUrl);
-  console.log('[Social] APP_URL:', APP_URL);
-  console.log('[Social] category:', topic.category);
 
   // 6. Montar texto completo com hashtags
   const fullCaption = `${post.text}\n\n${post.hashtags.join(' ')}`;
@@ -148,6 +146,5 @@ export async function runSocialPost(options?: {
     topicKey: topic.key,
     facebook: fbResult,
     instagram: igResult,
-    debug: { imageUrl, appUrl: APP_URL, category: topic.category },
   };
 }
