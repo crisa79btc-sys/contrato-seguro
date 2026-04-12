@@ -7,6 +7,37 @@ import type { MetaPostResult } from './types';
 
 const GRAPH_API = 'https://graph.facebook.com/v21.0';
 
+/**
+ * Aguarda um container do Instagram ficar com status FINISHED.
+ * Necessário antes de criar o carrossel (Meta requer filhos FINISHED).
+ * Retorna true se ficou pronto, false se deu erro ou timeout.
+ */
+async function pollContainerStatus(
+  containerId: string,
+  token: string,
+  maxAttempts = 10,
+  intervalMs = 3000
+): Promise<boolean> {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    await new Promise(r => setTimeout(r, intervalMs));
+    try {
+      const qs = new URLSearchParams({ fields: 'status_code', access_token: token });
+      const res = await fetch(`${GRAPH_API}/${containerId}?${qs.toString()}`);
+      const data = await res.json() as { status_code?: string };
+      if (data.status_code === 'FINISHED') return true;
+      if (data.status_code === 'ERROR') {
+        console.error(`[Social] Container ${containerId} com status ERROR`);
+        return false;
+      }
+      console.log(`[Social] Container ${containerId}: ${data.status_code ?? 'sem status'} (${attempt}/${maxAttempts})`);
+    } catch {
+      // ignora erros de rede na verificação e continua polling
+    }
+  }
+  console.warn(`[Social] Container ${containerId}: timeout após ${maxAttempts} tentativas`);
+  return false;
+}
+
 function getConfig() {
   const token = process.env.META_PAGE_ACCESS_TOKEN;
   const pageId = process.env.META_PAGE_ID;
@@ -150,8 +181,8 @@ export async function postToInstagram(params: {
 
 /**
  * Publica um carrossel de imagens no Instagram Business (3 etapas).
- * Etapa 1: Cria containers filhos para cada imagem
- * Etapa 2: Cria container de carrossel referenciando os filhos
+ * Etapa 1: Cria containers filhos e aguarda cada um ficar FINISHED
+ * Etapa 2: Cria container de carrossel e aguarda ficar FINISHED
  * Etapa 3: Publica o carrossel
  */
 export async function postCarouselToInstagram(params: {
@@ -169,7 +200,7 @@ export async function postCarouselToInstagram(params: {
   }
 
   try {
-    // Etapa 1: Criar containers filhos
+    // Etapa 1: Criar containers filhos em série
     const childIds: string[] = [];
 
     for (const imageUrl of params.imageUrls) {
@@ -183,7 +214,7 @@ export async function postCarouselToInstagram(params: {
         }),
       });
 
-      const childData = await childRes.json();
+      const childData = await childRes.json() as { id?: string; error?: { message: string } };
 
       if (!childRes.ok || !childData.id) {
         const errorMsg = childData.error?.message || `HTTP ${childRes.status}`;
@@ -192,6 +223,17 @@ export async function postCarouselToInstagram(params: {
       }
 
       childIds.push(childData.id);
+    }
+
+    // Aguardar todos os filhos ficarem FINISHED em paralelo
+    // (Meta exige status FINISHED antes de criar o carrossel)
+    console.log(`[Social] Aguardando ${childIds.length} containers filhos ficarem prontos...`);
+    const readyResults = await Promise.all(
+      childIds.map(id => pollContainerStatus(id, token))
+    );
+    const failedIndex = readyResults.findIndex(r => !r);
+    if (failedIndex !== -1) {
+      return { id: '', success: false, error: `Container filho ${failedIndex + 1} não ficou pronto (FINISHED)` };
     }
 
     // Etapa 2: Criar container de carrossel
@@ -206,7 +248,7 @@ export async function postCarouselToInstagram(params: {
       }),
     });
 
-    const carouselData = await carouselRes.json();
+    const carouselData = await carouselRes.json() as { id?: string; error?: { message: string } };
 
     if (!carouselRes.ok || !carouselData.id) {
       const errorMsg = carouselData.error?.message || `HTTP ${carouselRes.status}`;
@@ -214,36 +256,33 @@ export async function postCarouselToInstagram(params: {
       return { id: '', success: false, error: errorMsg };
     }
 
-    const creationId = carouselData.id;
-
-    // Etapa 3: Publicar (com retry por MEDIA_NOT_READY)
-    for (let attempt = 1; attempt <= 4; attempt++) {
-      await new Promise((resolve) => setTimeout(resolve, attempt * 5000));
-
-      const publishRes = await fetch(`${GRAPH_API}/${igUserId}/media_publish`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          access_token: token,
-          creation_id: creationId,
-        }),
-      });
-
-      const publishData = await publishRes.json();
-
-      if (publishRes.ok && publishData.id) {
-        return { id: publishData.id, success: true };
-      }
-
-      const errorMsg = publishData.error?.message || '';
-      console.warn(`[Social] Instagram carrossel tentativa ${attempt}/4:`, errorMsg);
-
-      if (!errorMsg.toLowerCase().includes('not ready') && !errorMsg.includes('MEDIA_NOT_READY')) {
-        return { id: '', success: false, error: errorMsg };
-      }
+    // Aguardar container do carrossel ficar FINISHED
+    console.log(`[Social] Aguardando container do carrossel (${carouselData.id}) ficar pronto...`);
+    const carouselReady = await pollContainerStatus(carouselData.id, token);
+    if (!carouselReady) {
+      return { id: '', success: false, error: 'Container do carrossel não ficou pronto (FINISHED)' };
     }
 
-    return { id: '', success: false, error: 'Instagram: carrossel não ficou pronto após 4 tentativas' };
+    // Etapa 3: Publicar
+    const publishRes = await fetch(`${GRAPH_API}/${igUserId}/media_publish`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        access_token: token,
+        creation_id: carouselData.id,
+      }),
+    });
+
+    const publishData = await publishRes.json() as { id?: string; error?: { message: string } };
+
+    if (publishRes.ok && publishData.id) {
+      return { id: publishData.id, success: true };
+    }
+
+    const errorMsg = publishData.error?.message || `HTTP ${publishRes.status}`;
+    console.error('[Social] Erro Instagram (publicar carrossel):', errorMsg);
+    return { id: '', success: false, error: errorMsg };
+
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Erro desconhecido';
     console.error('[Social] Erro Instagram carrossel:', msg);

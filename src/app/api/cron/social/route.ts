@@ -9,7 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { runSocialPost } from '@/lib/social/post-orchestrator';
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 60;
+export const maxDuration = 90;
 
 export async function GET(request: NextRequest) {
   // Verificar autorização do cron

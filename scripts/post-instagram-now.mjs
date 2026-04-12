@@ -47,20 +47,19 @@ const BUCKET    = 'social-images';
 // ─── Conteúdo do carrossel ────────────────────────────────────────────────────
 
 const CAROUSEL = {
-  caption: `🔗 https://contrato-seguro-inky.vercel.app ← Analise seu contrato GRÁTIS com IA
+  caption: `Você já assinou um contrato sem ler o que estava escrito? 🤔
 
-⚠️ 5 cláusulas ABUSIVAS que todo brasileiro precisa conhecer antes de assinar qualquer contrato:
+Conheça 5 cláusulas ABUSIVAS que todo brasileiro precisa identificar antes de assinar:
 
-1️⃣ Foro em cidade diferente da sua — você pode ajuizar na sua cidade (CDC art. 101, I)
-2️⃣ Multa rescisória de 50%+ — a cláusula penal não pode superar a obrigação principal (CC arts. 412-413)
+1️⃣ Foro em cidade diferente — você pode ajuizar na sua cidade (CDC art. 101, I)
+2️⃣ Multa rescisória excessiva — não pode superar a obrigação principal (CC arts. 412-413)
 3️⃣ "Sem responsabilidade por nada" — renúncia total viola a boa-fé objetiva (CC art. 422)
-4️⃣ Sem direito à devolução — retenção integral dos valores pagos é abusiva (CDC art. 51, II)
-5️⃣ Fidelidade sem benefício — prazo de fidelidade sem contrapartida desequilibra o contrato (CC art. 421)
+4️⃣ Sem direito à devolução — reter 100% dos valores pagos é abusivo (CDC art. 51, II)
+5️⃣ Fidelidade sem benefício — sem contrapartida real, desequilibra o contrato (CC art. 421)
 
-👆 Deslize para ver cada cláusula em detalhes
+Você já encontrou alguma dessas cláusulas? Conta aqui nos comentários! 👇
 
-📲 Acesse agora e analise o seu:
-👉 https://contrato-seguro-inky.vercel.app
+🛡️ Analise seu contrato GRÁTIS com IA: ${APP_URL}
 
 ⚖️ Conteúdo informativo. Não substitui orientação jurídica profissional.
 
@@ -104,6 +103,9 @@ const CAROUSEL = {
 };
 
 const TOTAL_SLIDES = CAROUSEL.slides.length + 2; // cover + items + cta
+
+// Tipo do post para o badge dinâmico na capa (dica | mito_verdade | checklist | estatistica | pergunta)
+const POST_TYPE = 'checklist';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -221,6 +223,7 @@ async function generateAndUploadSlides() {
     {
       params: {
         type: 'cover',
+        badge: POST_TYPE,
         title: CAROUSEL.coverTitle,
         subtitle: CAROUSEL.coverSubtitle,
         current: '0',
@@ -266,6 +269,34 @@ async function generateAndUploadSlides() {
   return imageUrls;
 }
 
+// ─── Polling de status de container ──────────────────────────────────────────
+
+async function waitForContainer(containerId, label = containerId) {
+  const maxAttempts = 10;
+  const intervalMs = 3000;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    await new Promise(r => setTimeout(r, intervalMs));
+
+    const qs = new URLSearchParams({ fields: 'status_code', access_token: ACCESS_TOKEN });
+    const res = await fetch(`${GRAPH_API}/${containerId}?${qs.toString()}`);
+    const data = await res.json();
+
+    if (data.status_code === 'FINISHED') {
+      console.log(`   ✅ ${label}: FINISHED`);
+      return true;
+    }
+    if (data.status_code === 'ERROR') {
+      console.log(`   ❌ ${label}: ERROR`);
+      return false;
+    }
+    process.stdout.write(`   ⏳ ${label}: ${data.status_code || '...'} (${attempt}/${maxAttempts})\r`);
+  }
+
+  console.log(`   ⚠️  ${label}: timeout após ${maxAttempts} tentativas`);
+  return false;
+}
+
 // ─── Publicar Instagram carrossel ─────────────────────────────────────────────
 
 async function postInstagramCarousel(imageUrls) {
@@ -293,6 +324,17 @@ async function postInstagramCarousel(imageUrls) {
     console.log(`   ✅ Filho ${i + 1}/${imageUrls.length}: ${data.id}`);
   }
 
+  // Aguardar todos os filhos ficarem FINISHED em paralelo
+  // (Meta exige FINISHED antes de criar o container do carrossel)
+  console.log(`   Aguardando ${childIds.length} containers ficarem prontos...`);
+  const readyResults = await Promise.all(
+    childIds.map((id, i) => waitForContainer(id, `filho ${i + 1}`))
+  );
+  const failedIndex = readyResults.findIndex(r => !r);
+  if (failedIndex !== -1) {
+    throw new Error(`Container filho ${failedIndex + 1} não ficou pronto`);
+  }
+
   // Etapa 2: container de carrossel
   console.log('   Criando container do carrossel...');
   const carouselRes = await fetch(`${GRAPH_API}/${IG_USER_ID}/media`, {
@@ -308,39 +350,31 @@ async function postInstagramCarousel(imageUrls) {
 
   const carouselData = await carouselRes.json();
   if (!carouselData.id) throw new Error(`Falha no carrossel: ${JSON.stringify(carouselData)}`);
-  console.log(`   ✅ Container: ${carouselData.id}`);
+  console.log(`   ✅ Container carrossel: ${carouselData.id}`);
 
-  // Etapa 3: publicar (retry por MEDIA_NOT_READY)
+  // Aguardar container do carrossel ficar FINISHED
+  console.log('   Aguardando container do carrossel ficar pronto...');
+  const carouselReady = await waitForContainer(carouselData.id, 'carrossel');
+  if (!carouselReady) throw new Error('Container do carrossel não ficou pronto');
+
+  // Etapa 3: publicar
   console.log('   Publicando...');
-  for (let attempt = 1; attempt <= 5; attempt++) {
-    const waitMs = attempt * 5000;
-    process.stdout.write(`   ⏳ Aguardando ${waitMs / 1000}s... `);
-    await new Promise(r => setTimeout(r, waitMs));
+  const publishRes = await fetch(`${GRAPH_API}/${IG_USER_ID}/media_publish`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      access_token: ACCESS_TOKEN,
+      creation_id: carouselData.id,
+    }),
+  });
 
-    const publishRes = await fetch(`${GRAPH_API}/${IG_USER_ID}/media_publish`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        access_token: ACCESS_TOKEN,
-        creation_id: carouselData.id,
-      }),
-    });
-
-    const publishData = await publishRes.json();
-    if (publishData.id) {
-      console.log(`OK`);
-      return publishData.id;
-    }
-
-    const errorMsg = publishData.error?.message || JSON.stringify(publishData);
-    console.log(`ERRO: ${errorMsg}`);
-
-    if (!errorMsg.toLowerCase().includes('not ready') && !errorMsg.includes('MEDIA_NOT_READY')) {
-      throw new Error(`Instagram: ${errorMsg}`);
-    }
+  const publishData = await publishRes.json();
+  if (publishData.id) {
+    console.log(`   ✅ Publicado! ID: ${publishData.id}`);
+    return publishData.id;
   }
 
-  throw new Error('Instagram: carrossel não ficou pronto após 5 tentativas');
+  throw new Error(`Instagram: ${publishData.error?.message || JSON.stringify(publishData)}`);
 }
 
 // ─── Publicar Facebook álbum ──────────────────────────────────────────────────

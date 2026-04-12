@@ -43,6 +43,19 @@ const C = {
   gray900:     '#0f172a',
 };
 
+// ─── URL do app (via variável de ambiente) ────────────────────────────────────
+const APP_URL = (process.env.NEXT_PUBLIC_APP_URL || 'https://contrato-seguro-inky.vercel.app').trim();
+const APP_URL_DISPLAY = APP_URL.replace(/^https?:\/\//, '');
+
+// ─── Mapeamento de badge por tipo de post ────────────────────────────────────
+const BADGE_MAP: Record<string, string> = {
+  dica:        'DICA JURÍDICA',
+  mito_verdade:'MITO ou VERDADE?',
+  checklist:   'CHECKLIST',
+  estatistica: 'VOCÊ SABIA?',
+  pergunta:    'PARA REFLETIR',
+};
+
 // ─── Categorias legado ────────────────────────────────────────────────────────
 const CAT_EMOJI: Record<string, string> = {
   aluguel: '🏠', trabalho: '💼', servico: '🔧',
@@ -110,8 +123,8 @@ function DotsDark({ current, total }: { current: number; total: number }) {
 }
 
 // ─── TEMPLATE: COVER ─────────────────────────────────────────────────────────
-function CoverSlide({ title, subtitle, current, total }: {
-  title: string; subtitle: string; current: number; total: number;
+function CoverSlide({ title, subtitle, current, total, badgeText }: {
+  title: string; subtitle: string; current: number; total: number; badgeText: string;
 }) {
   return (
     <div style={{
@@ -145,7 +158,7 @@ function CoverSlide({ title, subtitle, current, total }: {
             fontFamily: 'Poppins', fontWeight: 600, fontSize: '15px',
             color: C.amberLight, letterSpacing: '0.3px',
           }}>
-            DICA JURÍDICA
+            {badgeText}
           </span>
         </div>
       </div>
@@ -292,7 +305,7 @@ function ItemSlide({ number, title, description, law, current, total }: {
           fontFamily: 'Poppins', fontWeight: 400,
           fontSize: '15px', color: C.gray400,
         }}>
-          https://contrato-seguro-inky.vercel.app
+          {APP_URL_DISPLAY}
         </div>
       </div>
     </div>
@@ -394,7 +407,7 @@ function CtaSlide({ total }: { total: number }) {
             fontSize: '26px', color: C.white,
             letterSpacing: '-0.3px',
           }}>
-            https://contrato-seguro-inky.vercel.app
+            {APP_URL}
           </span>
         </div>
       </div>
@@ -510,11 +523,12 @@ export async function GET(
   const total       = parseInt(p.get('total') || '7', 10);
   const headline    = p.get('headline') || 'Proteja seus direitos';
   const category    = p.get('category') || 'geral';
+  const badgeText   = BADGE_MAP[p.get('badge') || 'dica'] || 'DICA JURÍDICA';
 
   let jsx: React.ReactElement;
 
   if (type === 'cover') {
-    jsx = <CoverSlide title={title} subtitle={subtitle} current={current} total={total} />;
+    jsx = <CoverSlide title={title} subtitle={subtitle} current={current} total={total} badgeText={badgeText} />;
   } else if (type === 'item') {
     jsx = <ItemSlide number={number} title={title} description={description} law={law} current={current} total={total} />;
   } else if (type === 'cta') {

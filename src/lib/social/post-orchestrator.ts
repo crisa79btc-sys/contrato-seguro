@@ -57,18 +57,19 @@ async function fetchAndUploadSlide(slideUrl: string, filename: string): Promise<
 }
 
 /**
- * Gera e faz upload de todos os slides de um carrossel.
- * Retorna array com as URLs públicas.
+ * Gera e faz upload de todos os slides de um carrossel em paralelo.
+ * Retorna array com as URLs públicas (na ordem original).
  */
-async function buildCarouselImages(carousel: CarouselPost): Promise<string[]> {
+async function buildCarouselImages(carousel: CarouselPost, topicType: string): Promise<string[]> {
   const total = carousel.slides.length + 2; // cover + items + cta
   const timestamp = Date.now();
 
   const slideConfigs: Array<{ params: Record<string, string>; filename: string }> = [
-    // Slide de capa
+    // Slide de capa — com badge dinâmico pelo tipo do post
     {
       params: {
         type: 'cover',
+        badge: topicType,
         title: carousel.coverTitle,
         subtitle: carousel.coverSubtitle,
         current: '0',
@@ -100,17 +101,16 @@ async function buildCarouselImages(carousel: CarouselPost): Promise<string[]> {
     },
   ];
 
-  const urls: string[] = [];
-  for (const config of slideConfigs) {
-    const url = await fetchAndUploadSlide(buildSlideImageUrl(config.params), config.filename);
-    if (url) {
-      urls.push(url);
-    } else {
-      console.warn(`[Social] Slide ${config.filename} não gerado — pulando`);
-    }
-  }
+  // Geração em paralelo — reduz tempo de ~49s para ~10s
+  const urlsOrNull = await Promise.all(
+    slideConfigs.map(async (config) => {
+      const url = await fetchAndUploadSlide(buildSlideImageUrl(config.params), config.filename);
+      if (!url) console.warn(`[Social] Slide ${config.filename} não gerado — pulando`);
+      return url;
+    })
+  );
 
-  return urls;
+  return urlsOrNull.filter((url): url is string => url !== null);
 }
 
 /**
@@ -172,9 +172,9 @@ export async function runSocialPost(options?: {
     return { success: true, topicKey: topic.key };
   }
 
-  // 5. Gerar e fazer upload das imagens do carrossel
-  console.log('[Social] Gerando slides...');
-  const carouselImageUrls = await buildCarouselImages(carousel);
+  // 5. Gerar e fazer upload das imagens do carrossel (em paralelo)
+  console.log('[Social] Gerando slides em paralelo...');
+  const carouselImageUrls = await buildCarouselImages(carousel, topic.type);
   console.log(`[Social] ${carouselImageUrls.length} slides prontos`);
 
   // Fallback: se não gerou slides suficientes para carrossel (min 2), usar URL simples
