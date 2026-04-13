@@ -3,7 +3,35 @@
  * 30+ temas com rotação automática por categoria e tipo.
  */
 
-import type { TopicTemplate, PostCategory } from './types';
+import type { TopicTemplate, PostCategory, PostType } from './types';
+
+/**
+ * Calendário editorial semanal.
+ * Cada dia da semana tem uma categoria e tipo preferido.
+ * 0 = Domingo, 1 = Segunda, ..., 6 = Sábado (padrão JS getDay())
+ */
+export const DAY_OF_WEEK_CALENDAR: Record<number, { category: PostCategory; type: PostType }> = {
+  0: { category: 'geral',      type: 'mito_verdade' }, // Dom — reflexão do fim de semana
+  1: { category: 'trabalho',   type: 'dica' },          // Seg — direitos trabalhistas
+  2: { category: 'aluguel',    type: 'checklist' },     // Ter — moradia prática
+  3: { category: 'consumidor', type: 'mito_verdade' },  // Qua — mitos do CDC
+  4: { category: 'digital',    type: 'dica' },          // Qui — contratos digitais
+  5: { category: 'geral',      type: 'pergunta' },      // Sex — engajamento
+  6: { category: 'consumidor', type: 'estatistica' },   // Sáb — dados que chocam
+};
+
+/**
+ * Datas especiais brasileiras — override total de categoria+tipo.
+ * Formato: 'MM-DD' → { category, type, hint }
+ */
+export const SPECIAL_DATES: Record<string, { category: PostCategory; type: PostType; hint: string }> = {
+  '03-15': { category: 'consumidor', type: 'dica',        hint: 'Dia do Consumidor — seus direitos mais importantes' },
+  '04-07': { category: 'consumidor', type: 'checklist',   hint: 'Semana do Consumidor — checklist de direitos essenciais' },
+  '05-01': { category: 'trabalho',   type: 'estatistica', hint: 'Dia do Trabalhador — dados sobre direitos trabalhistas no Brasil' },
+  '08-11': { category: 'geral',      type: 'dica',        hint: 'Dia do Advogado — quando consultar um advogado antes de assinar' },
+  '09-07': { category: 'geral',      type: 'mito_verdade', hint: 'Independência — mitos sobre direitos do cidadão brasileiro' },
+  '10-29': { category: 'digital',    type: 'dica',        hint: 'Dia Mundial da Internet — direitos em contratos digitais' },
+};
 
 export const TOPIC_BANK: TopicTemplate[] = [
   // === ALUGUEL ===
@@ -576,34 +604,75 @@ export const TOPIC_BANK: TopicTemplate[] = [
 ];
 
 /**
- * Escolhe o próximo tema evitando repetições.
- * - Não repete temas já postados no ciclo
- * - Não repete a mesma categoria consecutivamente
- * - Reseta o ciclo quando todos os temas foram usados
+ * Escolhe o próximo tema com calendário editorial inteligente.
+ *
+ * Cascata de prioridade:
+ * 0. Data especial brasileira (Dia do Trabalhador, Dia do Consumidor, etc.)
+ * 1. Categoria + tipo do dia da semana, diferente de ontem em ambos
+ * 2. Categoria + tipo do dia da semana, diferente apenas em categoria
+ * 3. Categoria certa do dia, tipo diferente de ontem
+ * 4. Tipo diferente + categoria diferente
+ * 5. Categoria diferente (comportamento original)
+ * 6. Qualquer disponível (fallback final)
  */
 export function pickNextTopic(
   postedKeys: string[],
-  lastCategory: string | null
+  lastCategory: string | null,
+  lastType: string | null = null
 ): TopicTemplate {
-  // Filtrar temas ainda não postados
-  let available = TOPIC_BANK.filter((t) => !postedKeys.includes(t.key));
+  const available = TOPIC_BANK.filter((t) => !postedKeys.includes(t.key));
 
-  // Se todos foram postados, resetar ciclo
-  if (available.length === 0) {
-    available = [...TOPIC_BANK];
+  // Se todos foram postados, usar banco completo (reset acontece antes de chamar esta função)
+  const pool = available.length > 0 ? available : [...TOPIC_BANK];
+
+  // Prioridade 0: data especial brasileira
+  const todayMD = new Date().toISOString().slice(5, 10); // "MM-DD"
+  const special = SPECIAL_DATES[todayMD];
+  if (special) {
+    const match = pool.find((t) => t.category === special.category && t.type === special.type);
+    if (match) return match;
   }
 
-  // Evitar mesma categoria consecutiva
-  if (lastCategory) {
-    const different = available.filter((t) => t.category !== lastCategory);
-    if (different.length > 0) {
-      available = different;
-    }
-  }
+  // Categoria e tipo preferidos para hoje
+  const dow = new Date().getDay();
+  const preferred = DAY_OF_WEEK_CALENDAR[dow];
 
-  // Escolher aleatoriamente entre os disponíveis
-  const index = Math.floor(Math.random() * available.length);
-  return available[index];
+  // Prioridade 1: categoria + tipo certos, diferente de ontem em ambos
+  const p1 = pool.find((t) =>
+    t.category === preferred.category &&
+    t.type === preferred.type &&
+    t.category !== lastCategory &&
+    t.type !== lastType
+  );
+  if (p1) return p1;
+
+  // Prioridade 2: categoria + tipo certos, apenas categoria diferente de ontem
+  const p2 = pool.find((t) =>
+    t.category === preferred.category &&
+    t.type === preferred.type &&
+    t.category !== lastCategory
+  );
+  if (p2) return p2;
+
+  // Prioridade 3: categoria certa + tipo diferente de ontem
+  const p3 = pool.find((t) =>
+    t.category === preferred.category &&
+    t.type !== lastType
+  );
+  if (p3) return p3;
+
+  // Prioridade 4: tipo diferente + categoria diferente
+  const p4 = pool.find((t) =>
+    t.type !== lastType &&
+    t.category !== lastCategory
+  );
+  if (p4) return p4;
+
+  // Prioridade 5: apenas categoria diferente
+  const p5 = pool.find((t) => t.category !== lastCategory);
+  if (p5) return p5;
+
+  return pool[0];
 }
 
 /**

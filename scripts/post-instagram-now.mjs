@@ -47,57 +47,57 @@ const BUCKET    = 'social-images';
 // ─── Conteúdo do carrossel ────────────────────────────────────────────────────
 
 const CAROUSEL = {
-  caption: `Você já assinou um contrato sem ler o que estava escrito? 🤔
+  caption: `Todo mundo acha que sabe o que vale num contrato. E se você estiver errado? 🤔
 
-Conheça 5 cláusulas ABUSIVAS que todo brasileiro precisa identificar antes de assinar:
+5 mitos sobre contratos que os brasileiros acreditam — e o que a lei diz de verdade:
 
-1️⃣ Foro em cidade diferente — você pode ajuizar na sua cidade (CDC art. 101, I)
-2️⃣ Multa rescisória excessiva — não pode superar a obrigação principal (CC arts. 412-413)
-3️⃣ "Sem responsabilidade por nada" — renúncia total viola a boa-fé objetiva (CC art. 422)
-4️⃣ Sem direito à devolução — reter 100% dos valores pagos é abusivo (CDC art. 51, II)
-5️⃣ Fidelidade sem benefício — sem contrapartida real, desequilibra o contrato (CC art. 421)
+❌ "Contrato verbal não vale nada" → MITO
+❌ "Assinou, não tem mais saída" → MITO
+❌ "Letra miúda é sempre válida" → MITO
+❌ "App não responde por vendedor terceiro" → MITO
+❌ "Multa de 30% é completamente normal" → MITO
 
-Você já encontrou alguma dessas cláusulas? Conta aqui nos comentários! 👇
+Qual desses você acreditava? Manda aqui nos comentários! 👇
 
 🛡️ Analise seu contrato GRÁTIS com IA: ${APP_URL}
 
 ⚖️ Conteúdo informativo. Não substitui orientação jurídica profissional.
 
-#DireitoDoConsumidor #ContratoAbusivo #SeusDireitos #ProtecaoContratual #ContratoSeguro`,
+#MitoOuVerdade #DireitoContratual #SeusDireitos #ContratoSeguro #DireitoDoConsumidor`,
 
-  coverTitle: '5 cláusulas ABUSIVAS',
-  coverSubtitle: 'que todo brasileiro precisa conhecer antes de assinar',
+  coverTitle: 'MITO ou VERDADE?',
+  coverSubtitle: '5 coisas que todo brasileiro acredita sobre contratos',
 
   slides: [
     {
       number: '1',
-      title: 'Foro em outra cidade',
-      description: 'Em contrato de consumo, você tem o direito de ajuizar na sua própria cidade.',
-      law: 'CDC art. 101, I',
+      title: '"Verbal não vale nada"',
+      description: 'MITO. Contrato verbal é válido por lei. O problema é a prova — guarde prints, e-mails e nomes de testemunhas.',
+      law: 'CC art. 107',
     },
     {
       number: '2',
-      title: 'Multa rescisória abusiva',
-      description: 'A multa contratual não pode ultrapassar o valor da obrigação principal.',
-      law: 'CC arts. 412-413',
+      title: '"Assinou, sem saída"',
+      description: 'MITO. Cláusulas abusivas são nulas mesmo após assinatura. Compras online têm 7 dias de arrependimento garantidos.',
+      law: 'CDC arts. 49 e 51',
     },
     {
       number: '3',
-      title: 'Sem responsabilidade alguma',
-      description: 'Renúncia total à responsabilidade viola a boa-fé objetiva e pode ser anulada.',
-      law: 'CC art. 422',
+      title: '"Letra miúda é sagrada"',
+      description: 'MITO. Nenhuma cláusula pode violar a lei. Se está no contrato e é abusiva, é nula de pleno direito.',
+      law: 'CDC art. 51, CC art. 422',
     },
     {
       number: '4',
-      title: 'Sem devolução de valores',
-      description: 'Reter 100% do que o cliente pagou é cláusula abusiva no Código de Defesa do Consumidor.',
-      law: 'CDC art. 51, II',
+      title: '"App não é responsável"',
+      description: 'MITO. Marketplace responde solidariamente por produto defeituoso de terceiro vendido em sua plataforma.',
+      law: 'CDC art. 7º (STJ)',
     },
     {
       number: '5',
-      title: 'Fidelidade sem benefício',
-      description: 'Prazo de fidelidade unilateral, sem nenhuma contrapartida real, desequilibra o contrato.',
-      law: 'CC art. 421',
+      title: '"Multa de 30% é normal"',
+      description: 'MITO. A cláusula penal não pode superar o valor da obrigação. Juiz pode reduzir se for excessiva.',
+      law: 'CC arts. 412-413',
     },
   ],
 };
@@ -105,7 +105,7 @@ Você já encontrou alguma dessas cláusulas? Conta aqui nos comentários! 👇
 const TOTAL_SLIDES = CAROUSEL.slides.length + 2; // cover + items + cta
 
 // Tipo do post para o badge dinâmico na capa (dica | mito_verdade | checklist | estatistica | pergunta)
-const POST_TYPE = 'checklist';
+const POST_TYPE = 'mito_verdade';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

@@ -22,6 +22,7 @@ import {
   hasPostedToday,
   getPostedTopics,
   getLastCategory,
+  getLastType,
   recordPost,
   resetPostedTopics,
 } from './state';
@@ -150,14 +151,14 @@ export async function runSocialPost(options?: {
 
   // 3. Escolher tema
   let postedTopics = await getPostedTopics();
-  const lastCategory = await getLastCategory();
+  const [lastCategory, lastType] = await Promise.all([getLastCategory(), getLastType()]);
 
   if (postedTopics.length >= TOPIC_BANK.length) {
     await resetPostedTopics();
     postedTopics = [];
   }
 
-  const topic = pickNextTopic(postedTopics, lastCategory);
+  const topic = pickNextTopic(postedTopics, lastCategory, lastType);
   console.log(`[Social] Tema: ${topic.key} (${topic.category}/${topic.type})`);
 
   // 4. Gerar conteúdo em formato carrossel
@@ -251,6 +252,7 @@ export async function runSocialPost(options?: {
     await recordPost({
       date: today,
       topicKey: topic.key,
+      postType: topic.type,
       fbPostId: fbResult?.success ? fbResult.id : undefined,
       igPostId: igResult?.success ? igResult.id : undefined,
     });

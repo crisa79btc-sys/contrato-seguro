@@ -14,6 +14,7 @@ const KEYS = {
   postHistory: 'social_post_history',
   lastPostDate: 'social_last_post_date',
   lastCategory: 'social_last_category',
+  lastType: 'social_last_type',
 } as const;
 
 /**
@@ -80,6 +81,13 @@ export async function getLastCategory(): Promise<string | null> {
 }
 
 /**
+ * Retorna o último tipo de post publicado (dica, mito_verdade, checklist, etc.).
+ */
+export async function getLastType(): Promise<string | null> {
+  return getState<string>(KEYS.lastType);
+}
+
+/**
  * Registra um post realizado.
  */
 export async function recordPost(entry: PostHistoryEntry): Promise<void> {
@@ -89,6 +97,11 @@ export async function recordPost(entry: PostHistoryEntry): Promise<void> {
   // Atualizar última categoria
   const topic = entry.topicKey?.split('-')[0] || 'geral'; // ex: "aluguel" de "aluguel-multa-rescisao"
   await setState(KEYS.lastCategory, topic, 'Última categoria postada');
+
+  // Atualizar último tipo de post
+  if (entry.postType) {
+    await setState(KEYS.lastType, entry.postType, 'Último tipo de post publicado');
+  }
 
   // Adicionar tema à lista de postados
   const posted = await getPostedTopics();

@@ -50,6 +50,7 @@ export type CarouselPost = {
 export type PostHistoryEntry = {
   date: string;
   topicKey: string;
+  postType?: string;
   fbPostId?: string;
   igPostId?: string;
   error?: string;

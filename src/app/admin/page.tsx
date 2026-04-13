@@ -1,6 +1,20 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import type { PostHistoryEntry } from '@/lib/social/types';
+
+type SocialData = {
+  history: PostHistoryEntry[];
+  nextPosts: {
+    date: string;
+    dayName: string;
+    category: string;
+    type: string;
+    isSpecial: boolean;
+    specialHint: string | null;
+  }[];
+  nextSpecialDate: { date: string; hint: string } | null;
+};
 
 type AnalyticsData = {
   totalContracts: number;
@@ -47,10 +61,31 @@ const STATUS_LABELS: Record<string, string> = {
   paid: 'Pago',
 };
 
+const TYPE_BADGE: Record<string, string> = {
+  dica: 'DICA',
+  mito_verdade: 'MITO/VERDADE',
+  checklist: 'CHECKLIST',
+  estatistica: 'ESTATÍSTICA',
+  pergunta: 'PERGUNTA',
+};
+
+const CATEGORY_LABELS: Record<string, string> = {
+  aluguel: 'Aluguel',
+  trabalho: 'Trabalho',
+  servico: 'Serviço',
+  compra_venda: 'Compra/Venda',
+  consumidor: 'Consumidor',
+  digital: 'Digital',
+  geral: 'Geral',
+};
+
 export default function AdminDashboard() {
   const [secret, setSecret] = useState('');
   const [authenticated, setAuthenticated] = useState(false);
   const [data, setData] = useState<AnalyticsData | null>(null);
+  const [socialData, setSocialData] = useState<SocialData | null>(null);
+  const [forcingPost, setForcingPost] = useState(false);
+  const [forceResult, setForceResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -58,19 +93,26 @@ export default function AdminDashboard() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/admin/analytics?secret=${encodeURIComponent(s)}`);
-      if (res.status === 401) {
+      const [analyticsRes, socialRes] = await Promise.all([
+        fetch(`/api/admin/analytics?secret=${encodeURIComponent(s)}`),
+        fetch(`/api/admin/social?secret=${encodeURIComponent(s)}`),
+      ]);
+      if (analyticsRes.status === 401) {
         setError('Senha incorreta.');
         setAuthenticated(false);
         sessionStorage.removeItem('admin_secret');
         return;
       }
-      if (!res.ok) {
+      if (!analyticsRes.ok) {
         setError('Erro ao buscar dados.');
         return;
       }
-      const json = await res.json();
-      setData(json);
+      const [analyticsJson, socialJson] = await Promise.all([
+        analyticsRes.json(),
+        socialRes.ok ? socialRes.json() : null,
+      ]);
+      setData(analyticsJson);
+      if (socialJson) setSocialData(socialJson);
       setAuthenticated(true);
       sessionStorage.setItem('admin_secret', s);
     } catch {
@@ -79,6 +121,29 @@ export default function AdminDashboard() {
       setLoading(false);
     }
   }, []);
+
+  const handleForcePost = async () => {
+    setForcingPost(true);
+    setForceResult(null);
+    try {
+      const res = await fetch(`/api/admin/social?secret=${encodeURIComponent(secret)}`, {
+        method: 'POST',
+      });
+      const json = await res.json();
+      if (json.cronResponse?.success) {
+        setForceResult(`Post publicado! Tema: ${json.cronResponse.topicKey}`);
+      } else {
+        setForceResult(`Resposta: ${JSON.stringify(json.cronResponse || json)}`);
+      }
+      // Recarregar dados sociais
+      const socialRes = await fetch(`/api/admin/social?secret=${encodeURIComponent(secret)}`);
+      if (socialRes.ok) setSocialData(await socialRes.json());
+    } catch (err) {
+      setForceResult(`Erro: ${err instanceof Error ? err.message : 'desconhecido'}`);
+    } finally {
+      setForcingPost(false);
+    }
+  };
 
   // Recuperar sessão e auto-fetch
   useEffect(() => {
@@ -252,6 +317,92 @@ export default function AdminDashboard() {
             </div>
           </section>
         )}
+        {/* ===== SEÇÃO SOCIAL MEDIA ===== */}
+        <section className="rounded-xl border bg-white p-4">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-gray-900">Automação Social Media</h2>
+            <div className="flex items-center gap-2">
+              {forceResult && (
+                <span className="text-xs text-gray-600 max-w-xs truncate">{forceResult}</span>
+              )}
+              <button
+                onClick={handleForcePost}
+                disabled={forcingPost}
+                className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+              >
+                {forcingPost ? 'Postando...' : 'Forçar post agora'}
+              </button>
+            </div>
+          </div>
+
+          {socialData ? (
+            <div className="space-y-4">
+              {/* Próxima data especial */}
+              {socialData.nextSpecialDate && (
+                <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs">
+                  <span className="font-semibold text-amber-800">Próxima data especial:</span>{' '}
+                  <span className="text-amber-700">
+                    {new Date(socialData.nextSpecialDate.date + 'T12:00:00').toLocaleDateString('pt-BR')}
+                    {' — '}
+                    {socialData.nextSpecialDate.hint}
+                  </span>
+                </div>
+              )}
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                {/* Histórico recente */}
+                <div>
+                  <h3 className="mb-2 text-xs font-semibold text-gray-600 uppercase tracking-wide">Últimos 7 posts</h3>
+                  {socialData.history.length === 0 ? (
+                    <p className="text-xs text-gray-400">Nenhum post registrado ainda.</p>
+                  ) : (
+                    <div className="space-y-1">
+                      {socialData.history.map((h, i) => (
+                        <div key={i} className="flex items-center gap-2 text-xs">
+                          <span className="w-20 shrink-0 text-gray-500">{h.date}</span>
+                          <span className="flex-1 truncate text-gray-700" title={h.topicKey}>{h.topicKey}</span>
+                          {h.postType && (
+                            <span className="shrink-0 rounded-full bg-indigo-100 px-1.5 py-0.5 text-[10px] font-medium text-indigo-700">
+                              {TYPE_BADGE[h.postType] || h.postType}
+                            </span>
+                          )}
+                          <span className={`shrink-0 text-[10px] font-bold ${h.igPostId ? 'text-green-600' : 'text-red-400'}`}>
+                            {h.igPostId ? 'IG ✓' : 'IG ✗'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Calendário próximos 7 dias */}
+                <div>
+                  <h3 className="mb-2 text-xs font-semibold text-gray-600 uppercase tracking-wide">Próximos 7 dias</h3>
+                  <div className="space-y-1">
+                    {socialData.nextPosts.map((p, i) => (
+                      <div
+                        key={i}
+                        className={`flex items-center gap-2 text-xs rounded px-1 py-0.5 ${p.isSpecial ? 'bg-amber-50' : ''}`}
+                      >
+                        <span className="w-8 shrink-0 text-gray-400">{p.dayName.slice(0, 3)}</span>
+                        <span className="w-20 shrink-0 text-gray-500">{p.date.slice(5)}</span>
+                        <span className="flex-1 text-gray-700">{CATEGORY_LABELS[p.category] || p.category}</span>
+                        <span className="shrink-0 rounded-full bg-indigo-100 px-1.5 py-0.5 text-[10px] font-medium text-indigo-700">
+                          {TYPE_BADGE[p.type] || p.type}
+                        </span>
+                        {p.isSpecial && (
+                          <span className="shrink-0 text-[10px] text-amber-600 font-semibold">★</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-gray-400">Carregando dados sociais...</p>
+          )}
+        </section>
       </main>
     </div>
   );
