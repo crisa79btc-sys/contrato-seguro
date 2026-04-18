@@ -376,6 +376,9 @@ export default function AnalisePage({ params }: { params: { id: string } }) {
                 contractType={formatContractType(data.contractType || 'outro')}
               />
 
+              {/* Newsletter */}
+              <NewsletterCapture />
+
               {/* Resumo */}
               <div className="rounded-xl bg-gray-50 p-4">
                 <h2 className="text-sm font-semibold text-gray-900">Resumo</h2>
@@ -558,6 +561,60 @@ export default function AnalisePage({ params }: { params: { id: string } }) {
       </main>
 
       <Footer />
+    </div>
+  );
+}
+
+function NewsletterCapture() {
+  const [email, setEmail] = useState('');
+  const [status, setStatus] = useState<'idle' | 'loading' | 'done'>('idle');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || status !== 'idle') return;
+    setStatus('loading');
+    try {
+      await fetch('/api/newsletter/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+    } finally {
+      setStatus('done');
+    }
+  };
+
+  if (status === 'done') {
+    return (
+      <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-center">
+        <p className="text-sm font-medium text-green-800">Inscrito! Você receberá dicas jurídicas toda semana.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border border-brand-100 bg-brand-50 p-4">
+      <h3 className="text-sm font-semibold text-brand-900">Receba dicas jurídicas toda semana</h3>
+      <p className="mt-0.5 text-xs text-brand-700">Contratos, direitos e como se proteger — grátis no seu email.</p>
+      <form onSubmit={handleSubmit} className="mt-3 flex gap-2">
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="seu@email.com"
+          required
+          className="min-w-0 flex-1 rounded-lg border border-brand-200 px-3 py-2 text-sm outline-none focus:border-brand-400 focus:ring-1 focus:ring-brand-400"
+        />
+        <button
+          type="submit"
+          disabled={status === 'loading'}
+          className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-brand-700 active:scale-95 disabled:opacity-60"
+        >
+          {status === 'loading' ? (
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white inline-block" />
+          ) : 'Quero'}
+        </button>
+      </form>
     </div>
   );
 }

@@ -77,6 +77,7 @@ export type OrchestratorResult = {
   threads?: SocialPostResult;
   telegram?: SocialPostResult;
   linkedin?: SocialPostResult;
+  tiktok?: SocialPostResult;
   newsletter?: SocialPostResult;
   error?: string;
 };

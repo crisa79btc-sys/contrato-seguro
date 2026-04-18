@@ -16,6 +16,7 @@ import { generateCarouselPost } from './content-generator';
 import { postToThreads, postCarouselToInstagram, postAlbumToFacebook, isMetaConfigured, postFirstComment } from './meta-client';
 import { postToTelegram, isTelegramConfigured } from './telegram-client';
 import { postToLinkedIn, isLinkedInConfigured } from './linkedin-client';
+import { postCarouselToTikTok, isTikTokConfigured } from './tiktok-client';
 import { sendNewsletter, isBrevoConfigured, buildNewsletterHtml } from './brevo-client';
 import { uploadSocialImage } from './image-storage';
 import {
@@ -156,11 +157,12 @@ export async function runSocialPost(options?: {
   const metaConfig = isMetaConfigured();
   const telegramOk = isTelegramConfigured();
   const linkedInOk = isLinkedInConfigured();
+  const tikTokOk = isTikTokConfigured();
   const brevoOk = isBrevoConfigured();
 
   const anyConfigured =
     metaConfig.facebook || metaConfig.instagram || metaConfig.threads ||
-    telegramOk || linkedInOk || brevoOk;
+    telegramOk || linkedInOk || tikTokOk || brevoOk;
 
   if (!anyConfigured) {
     return { success: false, topicKey: 'none', error: 'Nenhuma rede social configurada' };
@@ -200,7 +202,7 @@ export async function runSocialPost(options?: {
   const firstImageUrl = carouselImageUrls[0] || `${APP_URL}/api/social/image/placeholder?category=${topic.category}`;
 
   // 6. Publicar em paralelo em todos os canais configurados
-  const [fbResult, igResult, threadsResult, telegramResult, linkedInResult] =
+  const [fbResult, igResult, threadsResult, telegramResult, linkedInResult, tikTokResult] =
     await Promise.all([
       // Facebook — álbum com todos os slides do carrossel
       metaConfig.facebook
@@ -230,6 +232,13 @@ export async function runSocialPost(options?: {
       linkedInOk
         ? postToLinkedIn({ text: fullCaption, url: APP_URL })
         : Promise.resolve(undefined as SocialPostResult | undefined),
+
+      // TikTok — carrossel de fotos
+      tikTokOk
+        ? (hasCarousel
+            ? postCarouselToTikTok({ caption: fullCaption, imageUrls: carouselImageUrls })
+            : Promise.resolve({ success: false, error: 'slides insuficientes' } as SocialPostResult))
+        : Promise.resolve(undefined as SocialPostResult | undefined),
     ]);
 
   // 7. Newsletter (separada — envolve geração de HTML)
@@ -253,6 +262,7 @@ export async function runSocialPost(options?: {
   if (threadsResult) console.log('[Social] Threads:', threadsResult.success ? `OK (${threadsResult.id})` : `ERRO: ${threadsResult.error}`);
   if (telegramResult) console.log('[Social] Telegram:', telegramResult.success ? `OK (${telegramResult.id})` : `ERRO: ${telegramResult.error}`);
   if (linkedInResult) console.log('[Social] LinkedIn:', linkedInResult.success ? `OK (${linkedInResult.id})` : `ERRO: ${linkedInResult.error}`);
+  if (tikTokResult) console.log('[Social] TikTok:', tikTokResult.success ? `OK (${tikTokResult.id})` : `ERRO: ${tikTokResult.error}`);
   if (newsletterResult) console.log('[Social] Newsletter:', newsletterResult.success ? `OK (${newsletterResult.id})` : `ERRO: ${newsletterResult.error}`);
 
   // Salvar URL da capa para o cron de Stories (reaproveita 24h depois)
@@ -274,6 +284,7 @@ export async function runSocialPost(options?: {
     (threadsResult?.success ?? false) ||
     (telegramResult?.success ?? false) ||
     (linkedInResult?.success ?? false) ||
+    (tikTokResult?.success ?? false) ||
     (newsletterResult?.success ?? false);
 
   // 9. Registrar no estado
@@ -298,6 +309,7 @@ export async function runSocialPost(options?: {
     threads: threadsResult,
     telegram: telegramResult,
     linkedin: linkedInResult,
+    tiktok: tikTokResult,
     newsletter: newsletterResult,
   };
 }
