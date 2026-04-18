@@ -438,6 +438,87 @@ export async function postToThreads(params: {
 }
 
 /**
+ * Posta um comentário como a própria conta num post do Instagram.
+ * Usado logo após a publicação para hackear o algoritmo:
+ * - Gera sinal inicial de conversação
+ * - Permite incluir link clicável (caption do IG não tem links)
+ * - Aumenta probabilidade de outros comentários
+ *
+ * Requer que o post já esteja publicado (mediaId retornado pelo publish).
+ */
+export async function postFirstComment(params: {
+  mediaId: string;
+  text: string;
+}): Promise<MetaPostResult> {
+  const { token } = getConfig();
+
+  try {
+    const response = await fetch(`${GRAPH_API}/${params.mediaId}/comments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        access_token: token,
+        message: params.text,
+      }),
+    });
+
+    const data = await response.json() as { id?: string; error?: { message: string } };
+
+    if (!response.ok || !data.id) {
+      const errorMsg = data.error?.message || `HTTP ${response.status}`;
+      console.error('[Social] Erro postFirstComment:', errorMsg);
+      return { id: '', success: false, error: errorMsg };
+    }
+
+    return { id: data.id, success: true };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Erro desconhecido';
+    console.error('[Social] Erro postFirstComment:', msg);
+    return { id: '', success: false, error: msg };
+  }
+}
+
+/**
+ * Publica um Story no Instagram Business.
+ * Story reaproveita capa do carrossel — posta 24h depois, gera alcance extra.
+ */
+export async function postStoryToInstagram(params: {
+  imageUrl: string;
+}): Promise<MetaPostResult> {
+  const { token, igUserId } = getConfig();
+  if (!igUserId) return { id: '', success: false, error: 'META_IG_USER_ID não configurado' };
+
+  try {
+    const createRes = await fetch(`${GRAPH_API}/${igUserId}/media`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        access_token: token,
+        image_url: params.imageUrl,
+        media_type: 'STORIES',
+      }),
+    });
+    const createData = await createRes.json() as { id?: string; error?: { message: string } };
+    if (!createRes.ok || !createData.id) {
+      return { id: '', success: false, error: createData.error?.message || `HTTP ${createRes.status}` };
+    }
+
+    await new Promise(r => setTimeout(r, 3000));
+    const publishRes = await fetch(`${GRAPH_API}/${igUserId}/media_publish`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ access_token: token, creation_id: createData.id }),
+    });
+    const publishData = await publishRes.json() as { id?: string; error?: { message: string } };
+    if (publishRes.ok && publishData.id) return { id: publishData.id, success: true };
+    return { id: '', success: false, error: publishData.error?.message || `HTTP ${publishRes.status}` };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Erro desconhecido';
+    return { id: '', success: false, error: msg };
+  }
+}
+
+/**
  * Verifica se as credenciais Meta estão configuradas.
  */
 export function isMetaConfigured(): { facebook: boolean; instagram: boolean; threads: boolean } {

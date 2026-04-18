@@ -11,13 +11,13 @@ import type { TopicTemplate, PostCategory, PostType } from './types';
  * 0 = Domingo, 1 = Segunda, ..., 6 = Sábado (padrão JS getDay())
  */
 export const DAY_OF_WEEK_CALENDAR: Record<number, { category: PostCategory; type: PostType }> = {
-  0: { category: 'geral',      type: 'mito_verdade' }, // Dom — reflexão do fim de semana
-  1: { category: 'trabalho',   type: 'dica' },          // Seg — direitos trabalhistas
-  2: { category: 'aluguel',    type: 'checklist' },     // Ter — moradia prática
-  3: { category: 'consumidor', type: 'mito_verdade' },  // Qua — mitos do CDC
-  4: { category: 'digital',    type: 'dica' },          // Qui — contratos digitais
-  5: { category: 'geral',      type: 'pergunta' },      // Sex — engajamento
-  6: { category: 'consumidor', type: 'estatistica' },   // Sáb — dados que chocam
+  0: { category: 'consumidor', type: 'caso_real' },     // Dom — caso real que chocou
+  1: { category: 'trabalho',   type: 'dica' },           // Seg — direitos trabalhistas
+  2: { category: 'aluguel',    type: 'checklist' },      // Ter — moradia prática
+  3: { category: 'consumidor', type: 'mito_verdade' },   // Qua — mitos do CDC
+  4: { category: 'digital',    type: 'dica' },           // Qui — contratos digitais
+  5: { category: 'geral',      type: 'pergunta' },       // Sex — engajamento
+  6: { category: 'aluguel',    type: 'caso_real' },      // Sáb — caso real moradia
 };
 
 /**
@@ -25,12 +25,19 @@ export const DAY_OF_WEEK_CALENDAR: Record<number, { category: PostCategory; type
  * Formato: 'MM-DD' → { category, type, hint }
  */
 export const SPECIAL_DATES: Record<string, { category: PostCategory; type: PostType; hint: string }> = {
-  '03-15': { category: 'consumidor', type: 'dica',        hint: 'Dia do Consumidor — seus direitos mais importantes' },
-  '04-07': { category: 'consumidor', type: 'checklist',   hint: 'Semana do Consumidor — checklist de direitos essenciais' },
-  '05-01': { category: 'trabalho',   type: 'estatistica', hint: 'Dia do Trabalhador — dados sobre direitos trabalhistas no Brasil' },
-  '08-11': { category: 'geral',      type: 'dica',        hint: 'Dia do Advogado — quando consultar um advogado antes de assinar' },
-  '09-07': { category: 'geral',      type: 'mito_verdade', hint: 'Independência — mitos sobre direitos do cidadão brasileiro' },
-  '10-29': { category: 'digital',    type: 'dica',        hint: 'Dia Mundial da Internet — direitos em contratos digitais' },
+  '01-15': { category: 'trabalho',    type: 'dica',         hint: 'Volta das férias coletivas — direitos do trabalhador no retorno: comprovante de gozo, folha de ponto. CLT art. 143.' },
+  '02-10': { category: 'digital',     type: 'caso_real',    hint: 'Temporada de Carnaval e golpes digitais de revenda de ingresso: caso real de cláusula "sem reembolso" em app de eventos, que é NULA (CDC art. 35).' },
+  '03-08': { category: 'trabalho',    type: 'estatistica',  hint: 'Dia Internacional da Mulher — estatística de desigualdade salarial e direitos da trabalhadora grávida/licença maternidade (CF art. 7º XVIII + CLT 392).' },
+  '03-15': { category: 'consumidor',  type: 'dica',         hint: 'Dia Mundial do Consumidor — CDC art. 6º: 7 direitos básicos que todo consumidor tem.' },
+  '05-01': { category: 'trabalho',    type: 'estatistica',  hint: 'Dia do Trabalhador — quantos direitos ainda são violados: FGTS não recolhido, horas extras não pagas. Dados do TST.' },
+  '05-12': { category: 'trabalho',    type: 'dica',         hint: 'Dia das Mães (semana) — licença maternidade, adaptação de horários, proibição de discriminação. CF art. 7º XVIII + Lei 11.770/08.' },
+  '06-12': { category: 'servico',     type: 'caso_real',    hint: 'Dia dos Namorados — contratos de fotografia/restaurante com cláusula de "não reembolso em caso de desistência". Caso real: noiva perdeu R$ 5k. CDC art. 51.' },
+  '08-11': { category: 'geral',       type: 'dica',         hint: 'Dia do Advogado — 5 situações em que NÃO dá pra resolver sozinho: herança complexa, contratos > R$ 50k, divórcio litigioso, ações trabalhistas, despejo.' },
+  '09-07': { category: 'consumidor',  type: 'mito_verdade', hint: 'Independência do Brasil — "o consumidor brasileiro é o mais protegido do mundo". Verdade parcial: CDC é top 3 mundial, mas execução falha.' },
+  '10-12': { category: 'servico',     type: 'checklist',    hint: 'Dia das Crianças — contratos de festa infantil (buffet, animador, fotógrafo): 5 cláusulas que você TEM que olhar antes de assinar.' },
+  '10-29': { category: 'digital',     type: 'dica',         hint: 'Dia Mundial da Internet — termos de uso e LGPD: quais dados você cedeu sem saber. Lei 13.709/18.' },
+  '11-25': { category: 'consumidor',  type: 'caso_real',    hint: 'Black Friday — caso real de "desconto enganoso" (preço inflado antes, desconto falso). CDC art. 37 + Decreto 5.903/06 exige histórico de preço honesto.' },
+  '12-10': { category: 'trabalho',    type: 'checklist',    hint: 'Dezembro — 13º salário, férias coletivas, rescisões de fim de ano. Checklist do que conferir no holerite.' },
 };
 
 export const TOPIC_BANK: TopicTemplate[] = [
@@ -754,6 +761,44 @@ export const TOPIC_BANK: TopicTemplate[] = [
     category: 'geral',
     type: 'estatistica',
     promptHint: 'Honorários médios de advogados para análise de contratos variam de centenas a milhares de reais dependendo da complexidade. Compare com o custo da análise automatizada e o valor gerado ao identificar cláusulas abusivas antes de assinar.',
+  },
+
+  // === CASO REAL — cláusulas absurdas comentadas ===
+  {
+    key: 'caso-real-multa-100pct',
+    category: 'aluguel',
+    type: 'caso_real',
+    promptHint: 'Cláusula real encontrada: "O locatário pagará multa equivalente a 100% do valor total do contrato em caso de rescisão antecipada". Comentar com sarcasmo: isso é absurdo e ilegal. A Lei 8.245/91 art. 4º exige multa PROPORCIONAL ao tempo restante. Tom de choque/indignação saudável.',
+  },
+  {
+    key: 'caso-real-pj-pejotizacao',
+    category: 'trabalho',
+    type: 'caso_real',
+    promptHint: 'Caso real: contrato PJ com jornada fixa 9-18h, chefe direto, exclusividade, férias não remuneradas. Comentar: isso é pejotização clássica e é RECLAMAÇÃO TRABALHISTA certa. CLT arts. 2º e 3º. Vínculo empregatício disfarçado.',
+  },
+  {
+    key: 'caso-real-foro-abusivo',
+    category: 'consumidor',
+    type: 'caso_real',
+    promptHint: 'Cláusula real: contrato de consumo eleger foro em cidade 2000 km distante do consumidor. Isso é NULO (CDC art. 51, IV). Consumidor ajuíza no próprio domicílio (CDC art. 101, I). Tom: "acham que você não vai contestar".',
+  },
+  {
+    key: 'caso-real-reserva-dominio',
+    category: 'compra_venda',
+    type: 'caso_real',
+    promptHint: 'Caso real: vendedor cobrou multa de 30% + reteve 100% dos valores pagos em compra de veículo parcelado. Comentar: retenção integral é abusiva (CDC art. 53). Com reserva de domínio válida, só pode reter o uso do bem + valor razoável pelo depreciação. CC arts. 521-528.',
+  },
+  {
+    key: 'caso-real-assinatura-perpetua',
+    category: 'digital',
+    type: 'caso_real',
+    promptHint: 'Cláusula real de app de streaming: "renovação automática por 12 meses sem opção de cancelamento online". CDC art. 51 + Lei 14.181/2021 (superendividamento). Cancelamento deve ser pelo MESMO canal da contratação (CDC art. 49 par. único). Tom: indignação comedida.',
+  },
+  {
+    key: 'caso-real-limitacao-total',
+    category: 'servico',
+    type: 'caso_real',
+    promptHint: 'Cláusula real: "a responsabilidade do prestador fica limitada ao valor da mensalidade, excluindo danos diretos, indiretos e lucros cessantes". NULA. Limitar responsabilidade por negligência grave viola CDC art. 51, I + CC art. 422 (boa-fé). Tom: "isso é comum e poucos sabem que é nulo".',
   },
 ];
 

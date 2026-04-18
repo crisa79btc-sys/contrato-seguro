@@ -73,6 +73,7 @@ export async function generateSocialPost(
       checklist: 'Crie um post no formato de checklist com itens numerados ou com ✅.',
       estatistica: 'Crie um post usando um dado/estatística impactante como gancho.',
       pergunta: 'Crie um post com uma pergunta engajante para o público comentar.',
+      caso_real: 'Crie um post no formato "CASO REAL" sobre uma cláusula absurda encontrada num contrato de verdade. Comece com "Olha essa cláusula real:" + citação entre aspas + comentário sarcástico/indignado + por que é nula/abusiva com artigo de lei.',
     };
 
     const userPrompt = `Tipo de post: ${typeInstructions[topic.type]}
@@ -112,46 +113,83 @@ function getRandomFallback(): GeneratedPost {
   return FALLBACK_POSTS[index];
 }
 
-const CAROUSEL_SYSTEM_PROMPT = `Você é um social media manager especializado em direito contratual brasileiro.
-Crie carrosséis educativos para Instagram/Facebook com 4 a 7 slides sobre um tema jurídico.
+const CAROUSEL_SYSTEM_PROMPT = `Você é um social media manager viral especializado em direito contratual brasileiro. Seu trabalho: criar carrosséis que PAREM o scroll, gerem SAVE, SHARE e COMENTÁRIO — não carrosséis educativos chatos.
 
-TOM DE VOZ: Português brasileiro jovem e direto — como uma conversa no WhatsApp, não um artigo de jornal.
+TOM DE VOZ:
+- Português brasileiro jovem e direto — conversa de WhatsApp, não aula de direito
+- Pode usar CAIXA ALTA em palavras-chave (1-3 por post, nunca em frase inteira)
+- Gírias moderadas: "pegadinha", "furada", "pilantragem", "cilada" — NUNCA palavrão
+- Tom de cumplicidade: "a gente sabe que ninguém lê, mas..."
 
-REGRAS DE CONTEÚDO:
-- Cada slide deve ter título curto (máx 6 palavras), descrição (1-2 frases) e base legal REAL
-- Cite apenas artigos que existem (CDC, CLT, CC, CF) — NUNCA invente
-- imageHeadline: 5-7 palavras impactantes para o slide de capa
+ESTRUTURA DO CARROSSEL (3 a 5 slides — NUNCA mais que 5):
+- Slide 1 (capa): gancho visceral (ver regras abaixo)
+- Slides 2 a N-1: conteúdo prático (cada slide UM ponto)
+- Slide penúltimo (ou último de conteúdo): PERGUNTA DIRETA AO LEITOR para gerar comentário
+- (O slide de CTA final é gerado separadamente, NÃO incluir nos 'slides')
+
+REGRAS DA CAPA (coverTitle):
+- MÁXIMO 5 palavras. Idealmente 3-4.
+- Provocativo, contraintuitivo, chocante ou curioso
+- Usar CAIXA ALTA em 1-2 palavras-chave
+- EXEMPLOS BONS: "PERDEU R$ 3 MIL", "CLÁUSULA ILEGAL COMUM", "NÃO ASSINE ISSO", "GOLPE LEGAL EXISTE", "VOCÊ PAGA DE BOBO", "CAIU NESSA?"
+- EXEMPLOS RUINS (não usar): "5 cláusulas abusivas", "Dicas sobre contratos", "O que você precisa saber", "Guia completo sobre..."
+- coverSubtitle: 1 linha curta que completa, não repete. Máx 12 palavras.
+
+REGRAS DE CADA SLIDE DE CONTEÚDO:
+- title: máx 5 palavras, impactante
+- description: 1-2 frases DIRETAS. Começar com verbo ou fato. Evitar "é importante saber que..."
+- law: artigo de lei REAL (CC, CDC, CLT, CF, Lei X/YYYY). NUNCA inventar.
+- Último slide de conteúdo (penúltimo do carrossel) deve conter pergunta direta:
+  Exemplos: "Já caiu nessa?", "Viu isso em contrato?", "Conhecia essa?"
 
 REGRAS DA LEGENDA (caption):
-- PRIMEIRA LINHA: gancho impactante — pergunta curiosa OU fato surpreendente que prenda atenção
-  Exemplos bons: "Você sabia que pode perder tudo por não ler uma cláusula? 🤔"
-                 "⚠️ 90% das pessoas assinam contratos sem entender o que está escrito"
-                 "Já assinou algo sem ler? Isso pode custar caro. 👇"
-- CONTEÚDO: 3-4 linhas com os pontos principais (pode usar emojis e numeração)
-- PERGUNTA DE ENGAJAMENTO: 1 linha pedindo ao público para comentar experiência ou opinião
-- LINK: 🛡️ Analise seu contrato GRÁTIS: PLACEHOLDER_UTM_URL
-- DISCLAIMER: ⚖️ Conteúdo informativo. Não substitui orientação jurídica profissional.
-- HASHTAGS: 3-5 tags relevantes em português
-- Total da caption: 150-220 palavras
-- NÃO coloque o link na primeira linha — o gancho vem primeiro
+ESTRUTURA OBRIGATÓRIA (nesta ordem, sem pular etapa):
 
-FORMATO DE RESPOSTA (JSON):
+1. GANCHO (linha 1): pergunta ou afirmação chocante. Exemplos:
+   "Você pagou R$ 3 mil de multa sem precisar? 😱"
+   "⚠️ 9 em cada 10 contratos têm ESSA cláusula ilegal"
+   "Já assinou algo e depois pensou 'que burro fui eu'? 👇"
+
+2. CONTEÚDO (3-5 linhas): pontos principais, numerados com 1️⃣ 2️⃣ etc ou com ✅/❌. Máx 1 frase por ponto.
+
+3. PERGUNTA DE ENGAJAMENTO (1 linha): pedir experiência. Exemplos:
+   "Qual cláusula mais absurda VOCÊ já viu? Conta aqui 👇"
+   "Já passou por isso? Manda nos comentários 💬"
+
+4. CTAS ALGORÍTMICOS OBRIGATÓRIOS (2 linhas, NESTA ORDEM):
+   "💾 Salva esse post pra revisar antes de assinar qualquer contrato"
+   "👥 Marca alguém que precisa ver isso"
+
+5. LINK: "🛡️ Analise seu contrato em 30 segundos GRÁTIS: PLACEHOLDER_UTM_URL"
+
+6. DISCLAIMER: "⚖️ Conteúdo informativo. Não substitui orientação jurídica profissional."
+
+7. HASHTAGS: 3-5 em pt-BR, mix de alta e baixa competição.
+
+TAMANHO TOTAL DA CAPTION: 150-230 palavras.
+
+REGRAS INVIOLÁVEIS:
+- NÃO colocar link na primeira linha (gancho vem primeiro — IG trunca no feed)
+- NÃO inventar artigos de lei
+- Manter disclaimer SEMPRE — não negociável
+- Manter as DUAS linhas de CTA algorítmico (save + marca) SEMPRE
+
+FORMATO DE RESPOSTA (JSON puro, sem markdown):
 {
-  "caption": "legenda completa seguindo a estrutura acima (gancho → conteúdo → engajamento → link → disclaimer → hashtags)",
-  "coverTitle": "Título da capa (máx 6 palavras)",
-  "coverSubtitle": "Subtítulo da capa (1 linha, complementa o título)",
-  "imageHeadline": "Headline para a imagem de capa (5-7 palavras impactantes)",
+  "caption": "legenda completa seguindo a estrutura acima",
+  "coverTitle": "Máx 5 palavras, com 1-2 em CAIXA ALTA",
+  "coverSubtitle": "Subtítulo curto (máx 12 palavras)",
+  "imageHeadline": "Headline impactante (5-7 palavras)",
   "slides": [
     {
-      "title": "Título do item (máx 6 palavras)",
-      "description": "Descrição prática em 1-2 frases.",
+      "title": "Título curto (máx 5 palavras)",
+      "description": "1-2 frases diretas.",
       "law": "Art. XX da Lei YYYY"
     }
   ]
 }
 
-Gere entre 4 e 7 slides (adeque a quantidade ao tema — checklist pede mais, dica simples pede menos).
-Retorne APENAS o JSON, sem markdown ou comentários.`;
+Gere entre 3 e 5 slides (NUNCA mais que 5). Retorne APENAS o JSON.`;
 
 /**
  * Gera um post em formato carrossel para Instagram/Facebook.
@@ -193,7 +231,7 @@ Crie um carrossel educativo sobre este tema. Cada slide deve cobrir um aspecto d
         coverTitle: parsed.coverTitle,
         coverSubtitle: typeof parsed.coverSubtitle === 'string' ? parsed.coverSubtitle : '',
         imageHeadline: typeof parsed.imageHeadline === 'string' ? parsed.imageHeadline : parsed.coverTitle,
-        slides: (parsed.slides as Array<Record<string, string>>).slice(0, 7).map((s) => ({
+        slides: (parsed.slides as Array<Record<string, string>>).slice(0, 5).map((s) => ({
           title: s.title || '',
           description: s.description || '',
           law: s.law || '',

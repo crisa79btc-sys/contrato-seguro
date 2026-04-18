@@ -13,7 +13,7 @@
 
 import { pickNextTopic, TOPIC_BANK } from './topics';
 import { generateCarouselPost } from './content-generator';
-import { postToThreads, postCarouselToInstagram, postAlbumToFacebook, isMetaConfigured } from './meta-client';
+import { postToThreads, postCarouselToInstagram, postAlbumToFacebook, isMetaConfigured, postFirstComment } from './meta-client';
 import { postToTelegram, isTelegramConfigured } from './telegram-client';
 import { postToLinkedIn, isLinkedInConfigured } from './linkedin-client';
 import { sendNewsletter, isBrevoConfigured, buildNewsletterHtml } from './brevo-client';
@@ -25,6 +25,7 @@ import {
   getLastType,
   recordPost,
   resetPostedTopics,
+  recordLastCoverUrl,
 } from './state';
 import type { OrchestratorResult, MetaPostResult, SocialPostResult, CarouselPost } from './types';
 
@@ -61,16 +62,17 @@ async function fetchAndUploadSlide(slideUrl: string, filename: string): Promise<
  * Gera e faz upload de todos os slides de um carrossel em paralelo.
  * Retorna array com as URLs públicas (na ordem original).
  */
-async function buildCarouselImages(carousel: CarouselPost, topicType: string): Promise<string[]> {
+async function buildCarouselImages(carousel: CarouselPost, topicType: string, topicCategory: string): Promise<string[]> {
   const total = carousel.slides.length + 2; // cover + items + cta
   const timestamp = Date.now();
 
   const slideConfigs: Array<{ params: Record<string, string>; filename: string }> = [
-    // Slide de capa — com badge dinâmico pelo tipo do post
+    // Slide de capa — com badge e categoria para tema de cor dinâmico
     {
       params: {
         type: 'cover',
         badge: topicType,
+        category: topicCategory,
         title: carousel.coverTitle,
         subtitle: carousel.coverSubtitle,
         current: '0',
@@ -82,6 +84,7 @@ async function buildCarouselImages(carousel: CarouselPost, topicType: string): P
     ...carousel.slides.map((slide, i) => ({
       params: {
         type: 'item',
+        category: topicCategory,
         number: String(i + 1),
         title: slide.title,
         description: slide.description,
@@ -95,6 +98,7 @@ async function buildCarouselImages(carousel: CarouselPost, topicType: string): P
     {
       params: {
         type: 'cta',
+        category: topicCategory,
         current: String(total - 1),
         total: String(total),
       },
@@ -112,6 +116,19 @@ async function buildCarouselImages(carousel: CarouselPost, topicType: string): P
   );
 
   return urlsOrNull.filter((url): url is string => url !== null);
+}
+
+/**
+ * Gera texto do primeiro comentário para postar como a própria conta.
+ * Objetivo: gerar sinal algorítmico + incluir link clicável.
+ */
+function buildFirstComment(ctaUrl: string): string {
+  const variations = [
+    `🛡️ Quer ver se SEU contrato tem cláusula ilegal? Análise em 30s (grátis): ${ctaUrl}\n\nQual cláusula mais absurda VOCÊ já viu? Conta aqui 👇`,
+    `🔍 Analisa seu próprio contrato aqui em 30 segundos (grátis, sem cadastro): ${ctaUrl}\n\nJá pegou uma pegadinha num contrato? Comenta aí 💬`,
+    `⚖️ Testa seu contrato antes de assinar: ${ctaUrl}\n\nConhece alguém que caiu numa dessas? Marca a pessoa 👇`,
+  ];
+  return variations[Math.floor(Math.random() * variations.length)]!;
 }
 
 /**
@@ -175,7 +192,7 @@ export async function runSocialPost(options?: {
 
   // 5. Gerar e fazer upload das imagens do carrossel (em paralelo)
   console.log('[Social] Gerando slides em paralelo...');
-  const carouselImageUrls = await buildCarouselImages(carousel, topic.type);
+  const carouselImageUrls = await buildCarouselImages(carousel, topic.type, topic.category);
   console.log(`[Social] ${carouselImageUrls.length} slides prontos`);
 
   // Fallback: se não gerou slides suficientes para carrossel (min 2), usar URL simples
@@ -237,6 +254,19 @@ export async function runSocialPost(options?: {
   if (telegramResult) console.log('[Social] Telegram:', telegramResult.success ? `OK (${telegramResult.id})` : `ERRO: ${telegramResult.error}`);
   if (linkedInResult) console.log('[Social] LinkedIn:', linkedInResult.success ? `OK (${linkedInResult.id})` : `ERRO: ${linkedInResult.error}`);
   if (newsletterResult) console.log('[Social] Newsletter:', newsletterResult.success ? `OK (${newsletterResult.id})` : `ERRO: ${newsletterResult.error}`);
+
+  // Salvar URL da capa para o cron de Stories (reaproveita 24h depois)
+  if (carouselImageUrls[0]) {
+    await recordLastCoverUrl(carouselImageUrls[0]);
+  }
+
+  // Primeiro comentário automático no IG — sinal algorítmico + link clicável
+  if (igResult?.success && igResult.id) {
+    const ctaUrl = `${APP_URL}?utm_source=instagram&utm_medium=comment&utm_campaign=${topic.key}`;
+    const commentText = buildFirstComment(ctaUrl);
+    const commentResult = await postFirstComment({ mediaId: igResult.id, text: commentText });
+    console.log('[Social] IG first comment:', commentResult.success ? `OK (${commentResult.id})` : `ERRO: ${commentResult.error}`);
+  }
 
   const anySuccess =
     (fbResult?.success ?? false) ||

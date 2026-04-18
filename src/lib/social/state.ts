@@ -15,6 +15,7 @@ const KEYS = {
   lastPostDate: 'social_last_post_date',
   lastCategory: 'social_last_category',
   lastType: 'social_last_type',
+  lastCoverUrl: 'social_last_cover_url',
 } as const;
 
 /**
@@ -120,4 +121,19 @@ export async function recordPost(entry: PostHistoryEntry): Promise<void> {
  */
 export async function resetPostedTopics(): Promise<void> {
   await setState(KEYS.postedTopics, [], 'Temas resetados — novo ciclo');
+}
+
+/**
+ * Salva a URL da capa do último carrossel publicado.
+ * Usada pelo cron de Stories para reaproveitar a imagem 24h depois.
+ */
+export async function recordLastCoverUrl(url: string): Promise<void> {
+  await setState(KEYS.lastCoverUrl, url, 'URL da capa do último carrossel publicado');
+}
+
+/**
+ * Retorna a URL da capa do último carrossel publicado.
+ */
+export async function getLastCoverUrl(): Promise<string | null> {
+  return getState<string>(KEYS.lastCoverUrl);
 }

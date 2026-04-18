@@ -16,7 +16,8 @@ export type PostType =
   | 'mito_verdade'
   | 'checklist'
   | 'estatistica'
-  | 'pergunta';
+  | 'pergunta'
+  | 'caso_real';
 
 export type TopicTemplate = {
   key: string;

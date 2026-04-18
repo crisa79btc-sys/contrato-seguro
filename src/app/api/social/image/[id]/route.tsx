@@ -10,6 +10,8 @@
  *
  * Parâmetros:
  *   type        → cover | item | cta
+ *   category    → aluguel | trabalho | servico | compra_venda | consumidor | digital | geral
+ *   badge       → dica | mito_verdade | checklist | estatistica | pergunta
  *   title       → título principal
  *   subtitle    → subtítulo (cover) ou descrição breve (item)
  *   number      → número do slide item ("1"–"9")
@@ -17,7 +19,6 @@
  *   current     → índice do slide atual (0-based, para dots)
  *   total       → total de slides (para dots)
  *   headline    → legado: headline do post único
- *   category    → legado: categoria do post único
  */
 
 import { ImageResponse } from 'next/og';
@@ -26,40 +27,86 @@ import { NextRequest } from 'next/server';
 export const dynamic = 'force-dynamic';
 export const runtime = 'edge';
 
-// ─── Paleta ───────────────────────────────────────────────────────────────────
-const C = {
-  navy:        '#0a1628',
-  navyMid:     '#0f2040',
-  navyLight:   '#1a3a6e',
-  amber:       '#f59e0b',
-  amberLight:  '#fbbf24',
-  amberDark:   '#d97706',
-  white:       '#ffffff',
-  offWhite:    '#f1f5f9',
-  gray200:     '#e2e8f0',
-  gray400:     '#94a3b8',
-  gray500:     '#64748b',
-  gray700:     '#334155',
-  gray900:     '#0f172a',
+// ─── Temas por categoria ──────────────────────────────────────────────────────
+type Theme = {
+  bg1: string; bg2: string; bg3: string;
+  accent: string; accentLight: string; accentDark: string;
+  itemBg: string; itemStripe: string; emoji: string;
 };
 
-// ─── URL do app (via variável de ambiente) ────────────────────────────────────
+const THEMES: Record<string, Theme> = {
+  aluguel: {
+    bg1: '#0d3b2e', bg2: '#0f4f3d', bg3: '#073527',
+    accent: '#10b981', accentLight: '#34d399', accentDark: '#059669',
+    itemBg: '#f0fdf4', itemStripe: '#10b981',
+    emoji: '🏠',
+  },
+  trabalho: {
+    bg1: '#1e1b4b', bg2: '#2d1f6b', bg3: '#130f38',
+    accent: '#8b5cf6', accentLight: '#a78bfa', accentDark: '#7c3aed',
+    itemBg: '#f5f3ff', itemStripe: '#8b5cf6',
+    emoji: '💼',
+  },
+  servico: {
+    bg1: '#431407', bg2: '#7c2d12', bg3: '#2c0d04',
+    accent: '#f97316', accentLight: '#fb923c', accentDark: '#ea580c',
+    itemBg: '#fff7ed', itemStripe: '#f97316',
+    emoji: '🔧',
+  },
+  compra_venda: {
+    bg1: '#2e1065', bg2: '#3b0764', bg3: '#1a0840',
+    accent: '#a855f7', accentLight: '#c084fc', accentDark: '#9333ea',
+    itemBg: '#faf5ff', itemStripe: '#a855f7',
+    emoji: '🤝',
+  },
+  consumidor: {
+    bg1: '#4a0219', bg2: '#881337', bg3: '#2d0110',
+    accent: '#f43f5e', accentLight: '#fb7185', accentDark: '#e11d48',
+    itemBg: '#fff1f2', itemStripe: '#f43f5e',
+    emoji: '🛒',
+  },
+  digital: {
+    bg1: '#0c1a2e', bg2: '#0e3d5c', bg3: '#060f1c',
+    accent: '#06b6d4', accentLight: '#22d3ee', accentDark: '#0891b2',
+    itemBg: '#ecfeff', itemStripe: '#06b6d4',
+    emoji: '💻',
+  },
+  geral: {
+    bg1: '#0a1628', bg2: '#0f2040', bg3: '#060e1f',
+    accent: '#f59e0b', accentLight: '#fbbf24', accentDark: '#d97706',
+    itemBg: '#fffbeb', itemStripe: '#f59e0b',
+    emoji: '⚖️',
+  },
+};
+
+function getTheme(category: string): Theme {
+  return THEMES[category] ?? THEMES.geral!;
+}
+
+// ─── Constantes ───────────────────────────────────────────────────────────────
+const WHITE = '#ffffff';
+const OFFWHITE = '#f8fafc';
+const GRAY400 = '#94a3b8';
+const GRAY500 = '#64748b';
+const GRAY700 = '#334155';
+const GRAY900 = '#0f172a';
+
 const APP_URL = (process.env.NEXT_PUBLIC_APP_URL || 'https://contrato-seguro-inky.vercel.app').trim();
 const APP_URL_DISPLAY = APP_URL.replace(/^https?:\/\//, '');
 
-// ─── Mapeamento de badge por tipo de post ────────────────────────────────────
+// ─── Mapeamento de badge ──────────────────────────────────────────────────────
 const BADGE_MAP: Record<string, string> = {
-  dica:        'DICA JURÍDICA',
-  mito_verdade:'MITO ou VERDADE?',
-  checklist:   'CHECKLIST',
-  estatistica: 'VOCÊ SABIA?',
-  pergunta:    'PARA REFLETIR',
+  dica:         'DICA JURÍDICA',
+  mito_verdade: 'MITO ou VERDADE?',
+  checklist:    'CHECKLIST',
+  estatistica:  'VOCÊ SABIA?',
+  pergunta:     'PARA REFLETIR',
+  caso_real:    'CASO REAL 🚨',
 };
 
-// ─── Categorias legado ────────────────────────────────────────────────────────
 const CAT_EMOJI: Record<string, string> = {
   aluguel: '🏠', trabalho: '💼', servico: '🔧',
-  compra_venda: '🚗', consumidor: '🛒', digital: '💻', geral: '📋',
+  compra_venda: '🤝', consumidor: '🛒', digital: '💻', geral: '📋',
 };
 const CAT_LABEL: Record<string, string> = {
   aluguel: 'Aluguel', trabalho: 'Trabalho', servico: 'Serviços',
@@ -74,11 +121,8 @@ function Logo({ light = true, size = 'md' }: { light?: boolean; size?: 'sm' | 'm
     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
       <span style={{ fontSize: sz.emoji }}>🛡️</span>
       <span style={{
-        fontFamily: 'Poppins',
-        fontWeight: 700,
-        fontSize: sz.text,
-        color: light ? C.white : C.navy,
-        letterSpacing: '-0.3px',
+        fontFamily: 'Poppins', fontWeight: 700, fontSize: sz.text,
+        color: light ? WHITE : GRAY900, letterSpacing: '-0.3px',
       }}>
         ContratoSeguro
       </span>
@@ -86,59 +130,56 @@ function Logo({ light = true, size = 'md' }: { light?: boolean; size?: 'sm' | 'm
   );
 }
 
-function Dot({ active, wide }: { active: boolean; wide?: boolean }) {
-  return (
-    <div style={{
-      width: active || wide ? '24px' : '8px',
-      height: '8px',
-      borderRadius: '4px',
-      background: active ? C.amber : 'rgba(255,255,255,0.25)',
-    }} />
-  );
-}
-
-function Dots({ current, total }: { current: number; total: number }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-      {Array.from({ length: total }, (_, i) => (
-        <Dot key={i} active={i === current} wide={i < current} />
-      ))}
-    </div>
-  );
-}
-
-function DotsDark({ current, total }: { current: number; total: number }) {
+function Dots({ current, total, accent }: { current: number; total: number; accent: string }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
       {Array.from({ length: total }, (_, i) => (
         <div key={i} style={{
-          width: i <= current ? '20px' : '8px',
-          height: '8px',
-          borderRadius: '4px',
-          background: i <= current ? C.amber : C.gray200,
+          width: i === current ? '24px' : i < current ? '20px' : '8px',
+          height: '8px', borderRadius: '4px',
+          background: i <= current ? accent : 'rgba(255,255,255,0.2)',
         }} />
       ))}
     </div>
   );
 }
 
-// ─── TEMPLATE: COVER ─────────────────────────────────────────────────────────
-function CoverSlide({ title, subtitle, current, total, badgeText }: {
-  title: string; subtitle: string; current: number; total: number; badgeText: string;
+function DotsDark({ current, total, accent }: { current: number; total: number; accent: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+      {Array.from({ length: total }, (_, i) => (
+        <div key={i} style={{
+          width: i <= current ? '20px' : '8px',
+          height: '8px', borderRadius: '4px',
+          background: i <= current ? accent : '#e2e8f0',
+        }} />
+      ))}
+    </div>
+  );
+}
+
+// ─── TEMPLATE: COVER padrão ───────────────────────────────────────────────────
+function CoverSlide({ title, subtitle, current, total, badgeText, theme }: {
+  title: string; subtitle: string; current: number; total: number;
+  badgeText: string; theme: Theme;
 }) {
   return (
     <div style={{
-      width: '100%', height: '100%',
-      display: 'flex', flexDirection: 'column',
-      backgroundImage: `linear-gradient(160deg, ${C.navyMid} 0%, ${C.navy} 55%, #060e1f 100%)`,
-      fontFamily: 'Poppins',
-      position: 'relative',
+      width: '100%', height: '100%', display: 'flex', flexDirection: 'column',
+      backgroundImage: `linear-gradient(160deg, ${theme.bg2} 0%, ${theme.bg1} 55%, ${theme.bg3} 100%)`,
+      fontFamily: 'Poppins', position: 'relative',
     }}>
-      {/* Accent circle blur (decorative) */}
+      {/* Accent glow */}
       <div style={{
         position: 'absolute', top: '-120px', right: '-120px',
         width: '500px', height: '500px', borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(245,158,11,0.12) 0%, transparent 70%)',
+        background: `radial-gradient(circle, ${theme.accent}1e 0%, transparent 70%)`,
+      }} />
+      {/* Accent glow bottom-left */}
+      <div style={{
+        position: 'absolute', bottom: '-100px', left: '-80px',
+        width: '400px', height: '400px', borderRadius: '50%',
+        background: `radial-gradient(circle, ${theme.accent}12 0%, transparent 70%)`,
       }} />
 
       {/* Top bar */}
@@ -149,14 +190,14 @@ function CoverSlide({ title, subtitle, current, total, badgeText }: {
         <Logo />
         <div style={{
           display: 'flex', alignItems: 'center', gap: '6px',
-          background: 'rgba(245,158,11,0.15)',
-          border: `1px solid rgba(245,158,11,0.35)`,
+          background: `${theme.accent}26`,
+          border: `1px solid ${theme.accent}59`,
           borderRadius: '100px', padding: '8px 18px',
         }}>
-          <span style={{ fontSize: '14px' }}>⚖️</span>
+          <span style={{ fontSize: '14px' }}>{theme.emoji}</span>
           <span style={{
             fontFamily: 'Poppins', fontWeight: 600, fontSize: '15px',
-            color: C.amberLight, letterSpacing: '0.3px',
+            color: theme.accentLight, letterSpacing: '0.3px',
           }}>
             {badgeText}
           </span>
@@ -166,26 +207,19 @@ function CoverSlide({ title, subtitle, current, total, badgeText }: {
       {/* Main content */}
       <div style={{
         flex: 1, display: 'flex', flexDirection: 'column',
-        justifyContent: 'center', padding: '0 60px',
-        gap: '20px',
+        justifyContent: 'center', padding: '0 60px', gap: '20px',
       }}>
-        {/* Amber bar */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <div style={{ width: '56px', height: '5px', borderRadius: '3px', background: C.amber }} />
-          <div style={{ width: '20px', height: '5px', borderRadius: '3px', background: `rgba(245,158,11,0.3)` }} />
+          <div style={{ width: '56px', height: '5px', borderRadius: '3px', background: theme.accent }} />
+          <div style={{ width: '20px', height: '5px', borderRadius: '3px', background: `${theme.accent}4d` }} />
         </div>
-
-        {/* Title */}
         <div style={{
           fontFamily: 'Poppins', fontWeight: 800,
           fontSize: title.length > 20 ? '72px' : '88px',
-          color: C.white, lineHeight: 1.0,
-          letterSpacing: '-2px',
+          color: WHITE, lineHeight: 1.0, letterSpacing: '-2px',
         }}>
           {title}
         </div>
-
-        {/* Subtitle */}
         <div style={{
           fontFamily: 'Poppins', fontWeight: 400,
           fontSize: '26px', color: 'rgba(255,255,255,0.6)',
@@ -200,11 +234,10 @@ function CoverSlide({ title, subtitle, current, total, badgeText }: {
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         padding: '0 60px 52px',
       }}>
-        <Dots current={current} total={total} />
+        <Dots current={current} total={total} accent={theme.accent} />
         <div style={{
           display: 'flex', alignItems: 'center', gap: '6px',
-          fontFamily: 'Poppins', fontSize: '15px',
-          color: 'rgba(255,255,255,0.4)',
+          fontFamily: 'Poppins', fontSize: '15px', color: 'rgba(255,255,255,0.4)',
         }}>
           <span>Deslize para ver</span>
           <span>→</span>
@@ -214,59 +247,312 @@ function CoverSlide({ title, subtitle, current, total, badgeText }: {
   );
 }
 
-// ─── TEMPLATE: ITEM ───────────────────────────────────────────────────────────
-function ItemSlide({ number, title, description, law, current, total }: {
-  number: string; title: string; description: string;
-  law: string; current: number; total: number;
+// ─── TEMPLATE: COVER pergunta ─────────────────────────────────────────────────
+function CoverPergunta({ title, subtitle, current, total, theme }: {
+  title: string; subtitle: string; current: number; total: number; theme: Theme;
 }) {
   return (
     <div style={{
-      width: '100%', height: '100%',
-      display: 'flex',
-      background: C.offWhite,
-      fontFamily: 'Poppins',
+      width: '100%', height: '100%', display: 'flex', flexDirection: 'column',
+      backgroundImage: `linear-gradient(135deg, ${theme.bg1} 0%, ${theme.bg3} 100%)`,
+      fontFamily: 'Poppins', position: 'relative',
     }}>
-      {/* Left amber stripe */}
+      {/* Giant ? watermark */}
       <div style={{
-        width: '14px', flexShrink: 0,
-        backgroundImage: `linear-gradient(to bottom, ${C.amber} 0%, ${C.amberDark} 100%)`,
-      }} />
+        position: 'absolute', right: '40px', top: '50%',
+        fontSize: '400px', color: `${theme.accent}10`,
+        fontFamily: 'Poppins', fontWeight: 800, lineHeight: 1,
+        transform: 'translateY(-50%)',
+      }}>?</div>
 
-      {/* Content */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '52px 60px 0' }}>
+        <Logo />
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '6px',
+          background: `${theme.accent}26`, border: `1px solid ${theme.accent}59`,
+          borderRadius: '100px', padding: '8px 18px',
+        }}>
+          <span style={{ fontSize: '18px' }}>🤔</span>
+          <span style={{ fontFamily: 'Poppins', fontWeight: 600, fontSize: '15px', color: theme.accentLight }}>
+            PARA REFLETIR
+          </span>
+        </div>
+      </div>
+
       <div style={{
         flex: 1, display: 'flex', flexDirection: 'column',
-        padding: '50px 56px',
+        justifyContent: 'center', padding: '0 60px', gap: '28px',
       }}>
+        {/* Accent circle with ? */}
+        <div style={{
+          width: '90px', height: '90px', borderRadius: '50%',
+          background: `linear-gradient(135deg, ${theme.accent}, ${theme.accentDark})`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: `0 8px 30px ${theme.accent}4d`,
+        }}>
+          <span style={{ fontSize: '52px', color: WHITE, fontFamily: 'Poppins', fontWeight: 800 }}>?</span>
+        </div>
+
+        <div style={{
+          fontFamily: 'Poppins', fontWeight: 800,
+          fontSize: title.length > 22 ? '64px' : '76px',
+          color: WHITE, lineHeight: 1.05, letterSpacing: '-1.5px', maxWidth: '820px',
+        }}>
+          {title}
+        </div>
+        <div style={{
+          fontFamily: 'Poppins', fontWeight: 400,
+          fontSize: '26px', color: 'rgba(255,255,255,0.55)', lineHeight: 1.45, maxWidth: '740px',
+        }}>
+          {subtitle}
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 60px 52px' }}>
+        <Dots current={current} total={total} accent={theme.accent} />
+        <span style={{ fontFamily: 'Poppins', fontSize: '15px', color: 'rgba(255,255,255,0.35)' }}>Deslize →</span>
+      </div>
+    </div>
+  );
+}
+
+// ─── TEMPLATE: COVER mito_verdade ─────────────────────────────────────────────
+function CoverMitoVerdade({ title, subtitle, current, total, theme }: {
+  title: string; subtitle: string; current: number; total: number; theme: Theme;
+}) {
+  return (
+    <div style={{
+      width: '100%', height: '100%', display: 'flex', flexDirection: 'column',
+      backgroundImage: `linear-gradient(160deg, ${theme.bg2} 0%, ${theme.bg1} 100%)`,
+      fontFamily: 'Poppins',
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '52px 60px 0' }}>
+        <Logo />
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '6px',
+          background: `${theme.accent}26`, border: `1px solid ${theme.accent}59`,
+          borderRadius: '100px', padding: '8px 18px',
+        }}>
+          <span style={{ fontSize: '14px' }}>🔍</span>
+          <span style={{ fontFamily: 'Poppins', fontWeight: 600, fontSize: '15px', color: theme.accentLight }}>
+            MITO ou VERDADE?
+          </span>
+        </div>
+      </div>
+
+      <div style={{
+        flex: 1, display: 'flex', flexDirection: 'column',
+        justifyContent: 'center', padding: '0 60px', gap: '32px',
+      }}>
+        {/* MITO / VERDADE tags */}
+        <div style={{ display: 'flex', gap: '16px' }}>
+          <div style={{
+            padding: '10px 24px', borderRadius: '8px',
+            background: 'rgba(239,68,68,0.2)', border: '1px solid rgba(239,68,68,0.4)',
+            fontFamily: 'Poppins', fontWeight: 700, fontSize: '20px', color: '#fca5a5',
+          }}>❌ MITO</div>
+          <div style={{
+            padding: '10px 24px', borderRadius: '8px',
+            background: `${theme.accent}26`, border: `1px solid ${theme.accent}59`,
+            fontFamily: 'Poppins', fontWeight: 700, fontSize: '20px', color: theme.accentLight,
+          }}>✅ VERDADE?</div>
+        </div>
+
+        <div style={{
+          fontFamily: 'Poppins', fontWeight: 800,
+          fontSize: title.length > 22 ? '62px' : '74px',
+          color: WHITE, lineHeight: 1.05, letterSpacing: '-1.5px',
+        }}>
+          {title}
+        </div>
+        <div style={{
+          fontFamily: 'Poppins', fontWeight: 400,
+          fontSize: '25px', color: 'rgba(255,255,255,0.55)', lineHeight: 1.45,
+        }}>
+          {subtitle}
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 60px 52px' }}>
+        <Dots current={current} total={total} accent={theme.accent} />
+        <span style={{ fontFamily: 'Poppins', fontSize: '15px', color: 'rgba(255,255,255,0.35)' }}>Deslize →</span>
+      </div>
+    </div>
+  );
+}
+
+// ─── TEMPLATE: COVER estatistica ─────────────────────────────────────────────
+function CoverEstatistica({ title, subtitle, current, total, theme }: {
+  title: string; subtitle: string; current: number; total: number; theme: Theme;
+}) {
+  // Extrai o número se o título começar com um (ex: "78% dos contratos...")
+  const numMatch = title.match(/^(\d[\d,.%]+)/);
+  const numPart = numMatch ? numMatch[1] : '';
+  const textPart = numPart ? title.slice(numPart.length).trim() : title;
+
+  return (
+    <div style={{
+      width: '100%', height: '100%', display: 'flex', flexDirection: 'column',
+      backgroundImage: `linear-gradient(150deg, ${theme.bg2} 0%, ${theme.bg1} 60%, ${theme.bg3} 100%)`,
+      fontFamily: 'Poppins',
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '52px 60px 0' }}>
+        <Logo />
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '6px',
+          background: `${theme.accent}26`, border: `1px solid ${theme.accent}59`,
+          borderRadius: '100px', padding: '8px 18px',
+        }}>
+          <span style={{ fontSize: '14px' }}>📊</span>
+          <span style={{ fontFamily: 'Poppins', fontWeight: 600, fontSize: '15px', color: theme.accentLight }}>
+            VOCÊ SABIA?
+          </span>
+        </div>
+      </div>
+
+      <div style={{
+        flex: 1, display: 'flex', flexDirection: 'column',
+        justifyContent: 'center', padding: '0 60px', gap: '16px',
+      }}>
+        {numPart ? (
+          <>
+            <div style={{
+              fontFamily: 'Poppins', fontWeight: 800, fontSize: '120px',
+              color: theme.accentLight, lineHeight: 0.95, letterSpacing: '-3px',
+            }}>
+              {numPart}
+            </div>
+            <div style={{
+              fontFamily: 'Poppins', fontWeight: 700, fontSize: '48px',
+              color: WHITE, lineHeight: 1.1, letterSpacing: '-1px', maxWidth: '780px',
+            }}>
+              {textPart}
+            </div>
+          </>
+        ) : (
+          <div style={{
+            fontFamily: 'Poppins', fontWeight: 800, fontSize: '72px',
+            color: WHITE, lineHeight: 1.05, letterSpacing: '-2px',
+          }}>
+            {title}
+          </div>
+        )}
+        <div style={{
+          fontFamily: 'Poppins', fontWeight: 400,
+          fontSize: '24px', color: 'rgba(255,255,255,0.55)', lineHeight: 1.45, maxWidth: '760px',
+        }}>
+          {subtitle}
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 60px 52px' }}>
+        <Dots current={current} total={total} accent={theme.accent} />
+        <span style={{ fontFamily: 'Poppins', fontSize: '15px', color: 'rgba(255,255,255,0.35)' }}>Deslize →</span>
+      </div>
+    </div>
+  );
+}
+
+// ─── TEMPLATE: COVER caso_real ───────────────────────────────────────────────
+function CoverCasoReal({ title, subtitle, current, total, theme }: {
+  title: string; subtitle: string; current: number; total: number; theme: Theme;
+}) {
+  return (
+    <div style={{
+      width: '100%', height: '100%', display: 'flex', flexDirection: 'column',
+      backgroundImage: `linear-gradient(155deg, ${theme.bg2} 0%, ${theme.bg1} 100%)`,
+      fontFamily: 'Poppins', position: 'relative',
+    }}>
+      {/* Faixa superior vermelha estilo "alerta" */}
+      <div style={{
+        position: 'absolute', top: 0, left: 0, right: 0, height: '12px',
+        background: 'linear-gradient(90deg, #dc2626, #f43f5e, #dc2626)',
+      }} />
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '60px 60px 0' }}>
+        <Logo />
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '6px',
+          background: 'rgba(220,38,38,0.2)', border: '1px solid rgba(220,38,38,0.45)',
+          borderRadius: '100px', padding: '8px 18px',
+        }}>
+          <span style={{ fontSize: '14px' }}>🚨</span>
+          <span style={{ fontFamily: 'Poppins', fontWeight: 700, fontSize: '15px', color: '#fca5a5', letterSpacing: '0.5px' }}>
+            CASO REAL
+          </span>
+        </div>
+      </div>
+
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '0 60px', gap: '24px' }}>
+        {/* Aspas decorativas */}
+        <span style={{ fontSize: '140px', lineHeight: 0.6, color: `${theme.accent}55`, fontFamily: 'Poppins', fontWeight: 800 }}>
+          {'"'}
+        </span>
+        <div style={{
+          fontFamily: 'Poppins', fontWeight: 800,
+          fontSize: title.length > 20 ? '68px' : '84px',
+          color: WHITE, lineHeight: 1.05, letterSpacing: '-1.5px', marginTop: '-40px',
+        }}>
+          {title}
+        </div>
+        <div style={{
+          fontFamily: 'Poppins', fontWeight: 400, fontSize: '25px',
+          color: 'rgba(255,255,255,0.6)', lineHeight: 1.4, maxWidth: '780px',
+        }}>
+          {subtitle}
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 60px 52px' }}>
+        <Dots current={current} total={total} accent={theme.accent} />
+        <span style={{ fontFamily: 'Poppins', fontSize: '15px', color: 'rgba(255,255,255,0.4)' }}>Deslize →</span>
+      </div>
+    </div>
+  );
+}
+
+// ─── TEMPLATE: ITEM ───────────────────────────────────────────────────────────
+function ItemSlide({ number, title, description, law, current, total, theme }: {
+  number: string; title: string; description: string;
+  law: string; current: number; total: number; theme: Theme;
+}) {
+  return (
+    <div style={{
+      width: '100%', height: '100%', display: 'flex',
+      background: theme.itemBg, fontFamily: 'Poppins',
+    }}>
+      {/* Left accent stripe */}
+      <div style={{
+        width: '14px', flexShrink: 0,
+        backgroundImage: `linear-gradient(to bottom, ${theme.accent} 0%, ${theme.accentDark} 100%)`,
+      }} />
+
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '50px 56px' }}>
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
           <Logo light={false} size="sm" />
-          <DotsDark current={current} total={total} />
+          <DotsDark current={current} total={total} accent={theme.accent} />
         </div>
 
-        {/* Number + Title row */}
+        {/* Number + Title */}
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '28px', marginBottom: '22px' }}>
-          {/* Big number circle */}
           <div style={{
             width: '92px', height: '92px', borderRadius: '50%', flexShrink: 0,
-            backgroundImage: `linear-gradient(135deg, ${C.amberLight}, ${C.amberDark})`,
+            backgroundImage: `linear-gradient(135deg, ${theme.accentLight}, ${theme.accentDark})`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 8px 24px rgba(245,158,11,0.35)',
+            boxShadow: `0 8px 24px ${theme.accent}59`,
           }}>
             <span style={{
-              fontFamily: 'Poppins', fontWeight: 800,
-              fontSize: '46px', color: C.navy,
-              lineHeight: 1,
+              fontFamily: 'Poppins', fontWeight: 800, fontSize: '46px',
+              color: WHITE, lineHeight: 1,
             }}>
               {number}
             </span>
           </div>
-
-          {/* Title */}
           <div style={{
             fontFamily: 'Poppins', fontWeight: 800,
             fontSize: title.length > 22 ? '40px' : '48px',
-            color: C.gray900, lineHeight: 1.15,
-            letterSpacing: '-0.8px', paddingTop: '6px',
+            color: GRAY900, lineHeight: 1.15, letterSpacing: '-0.8px', paddingTop: '6px',
           }}>
             {title}
           </div>
@@ -275,36 +561,31 @@ function ItemSlide({ number, title, description, law, current, total }: {
         {/* Description */}
         <div style={{
           fontFamily: 'Poppins', fontWeight: 400,
-          fontSize: '24px', color: C.gray500,
-          lineHeight: 1.55, paddingLeft: '120px',
-          marginBottom: '28px', flex: 1,
+          fontSize: '24px', color: GRAY500, lineHeight: 1.55,
+          paddingLeft: '120px', marginBottom: '28px', flex: 1,
         }}>
           {description}
         </div>
 
         {/* Law badge */}
-        <div style={{ display: 'flex', paddingLeft: '120px', marginBottom: '24px' }}>
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: '8px',
-            background: C.navy,
-            borderRadius: '8px', padding: '10px 22px',
-          }}>
-            <span style={{ fontSize: '18px' }}>⚖️</span>
-            <span style={{
-              fontFamily: 'Poppins', fontWeight: 600,
-              fontSize: '18px', color: C.white,
-              letterSpacing: '0.2px',
+        {law && (
+          <div style={{ display: 'flex', paddingLeft: '120px', marginBottom: '24px' }}>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '8px',
+              background: theme.bg1,
+              borderRadius: '8px', padding: '10px 22px',
             }}>
-              {law}
-            </span>
+              <span style={{ fontSize: '18px' }}>⚖️</span>
+              <span style={{
+                fontFamily: 'Poppins', fontWeight: 600, fontSize: '18px', color: WHITE, letterSpacing: '0.2px',
+              }}>
+                {law}
+              </span>
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Footer */}
-        <div style={{
-          fontFamily: 'Poppins', fontWeight: 400,
-          fontSize: '15px', color: C.gray400,
-        }}>
+        <div style={{ fontFamily: 'Poppins', fontWeight: 400, fontSize: '15px', color: GRAY400 }}>
           {APP_URL_DISPLAY}
         </div>
       </div>
@@ -313,22 +594,19 @@ function ItemSlide({ number, title, description, law, current, total }: {
 }
 
 // ─── TEMPLATE: CTA ───────────────────────────────────────────────────────────
-function CtaSlide({ total }: { total: number }) {
+function CtaSlide({ total, theme }: { total: number; theme: Theme }) {
   return (
     <div style={{
-      width: '100%', height: '100%',
-      display: 'flex', flexDirection: 'column',
-      backgroundImage: `linear-gradient(155deg, #0d1f40 0%, ${C.navy} 50%, #050d1a 100%)`,
-      fontFamily: 'Poppins',
+      width: '100%', height: '100%', display: 'flex', flexDirection: 'column',
+      backgroundImage: `linear-gradient(155deg, ${theme.bg2} 0%, ${theme.bg1} 50%, ${theme.bg3} 100%)`,
+      fontFamily: 'Poppins', position: 'relative',
     }}>
-      {/* Accent glow */}
       <div style={{
         position: 'absolute', bottom: '-80px', left: '50%',
         width: '600px', height: '400px',
-        backgroundImage: 'radial-gradient(ellipse, rgba(245,158,11,0.1) 0%, transparent 70%)',
+        backgroundImage: `radial-gradient(ellipse, ${theme.accent}1a 0%, transparent 70%)`,
       }} />
 
-      {/* Top */}
       <div style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         padding: '52px 60px 0',
@@ -338,14 +616,12 @@ function CtaSlide({ total }: { total: number }) {
           {Array.from({ length: total }, (_, i) => (
             <div key={i} style={{
               width: '20px', height: '8px', borderRadius: '4px',
-              background: C.amber,
-              opacity: 0.5 + (i / total) * 0.5,
+              background: theme.accent, opacity: 0.5 + (i / total) * 0.5,
             }} />
           ))}
         </div>
       </div>
 
-      {/* Center */}
       <div style={{
         flex: 1, display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',
@@ -353,74 +629,60 @@ function CtaSlide({ total }: { total: number }) {
       }}>
         <span style={{ fontSize: '72px' }}>🛡️</span>
 
-        <div style={{
-          display: 'flex', flexDirection: 'column',
-          alignItems: 'center', gap: '4px',
-        }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
           <span style={{
             fontFamily: 'Poppins', fontWeight: 800, fontSize: '54px',
-            color: C.white, letterSpacing: '-1.5px', lineHeight: 1.1,
+            color: WHITE, letterSpacing: '-1.5px', lineHeight: 1.1,
           }}>
             Analise seu contrato
           </span>
           <span style={{
             fontFamily: 'Poppins', fontWeight: 800, fontSize: '54px',
-            color: C.amber, letterSpacing: '-1.5px', lineHeight: 1.1,
+            color: theme.accentLight, letterSpacing: '-1.5px', lineHeight: 1.1,
           }}>
             com IA agora
           </span>
         </div>
 
-        {/* GRATUITO badge */}
         <div style={{
           display: 'flex', alignItems: 'center', gap: '10px',
-          backgroundImage: `linear-gradient(135deg, ${C.amber}, ${C.amberDark})`,
+          backgroundImage: `linear-gradient(135deg, ${theme.accent}, ${theme.accentDark})`,
           borderRadius: '14px', padding: '16px 40px',
-          boxShadow: '0 8px 30px rgba(245,158,11,0.4)',
+          boxShadow: `0 8px 30px ${theme.accent}66`,
         }}>
           <span style={{ fontSize: '22px' }}>✅</span>
           <span style={{
-            fontFamily: 'Poppins', fontWeight: 800,
-            fontSize: '28px', color: C.navy,
-            letterSpacing: '1px',
+            fontFamily: 'Poppins', fontWeight: 800, fontSize: '28px',
+            color: WHITE, letterSpacing: '1px',
           }}>
             GRATUITO
           </span>
         </div>
 
-        {/* URL box */}
         <div style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px',
-          background: 'rgba(255,255,255,0.06)',
-          border: '1px solid rgba(255,255,255,0.12)',
+          background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
           borderRadius: '14px', padding: '18px 44px',
         }}>
           <span style={{
-            fontFamily: 'Poppins', fontWeight: 400,
-            fontSize: '15px', color: 'rgba(255,255,255,0.4)',
-            letterSpacing: '0.5px', textTransform: 'uppercase',
+            fontFamily: 'Poppins', fontWeight: 400, fontSize: '15px',
+            color: 'rgba(255,255,255,0.4)', letterSpacing: '0.5px', textTransform: 'uppercase',
           }}>
             Acesse agora
           </span>
           <span style={{
-            fontFamily: 'Poppins', fontWeight: 700,
-            fontSize: '26px', color: C.white,
-            letterSpacing: '-0.3px',
+            fontFamily: 'Poppins', fontWeight: 700, fontSize: '26px',
+            color: WHITE, letterSpacing: '-0.3px',
           }}>
             {APP_URL}
           </span>
         </div>
       </div>
 
-      {/* Footer */}
-      <div style={{
-        display: 'flex', justifyContent: 'center',
-        padding: '0 60px 44px',
-      }}>
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '0 60px 44px' }}>
         <span style={{
-          fontFamily: 'Poppins', fontWeight: 400,
-          fontSize: '14px', color: 'rgba(255,255,255,0.3)',
-          textAlign: 'center',
+          fontFamily: 'Poppins', fontWeight: 400, fontSize: '14px',
+          color: 'rgba(255,255,255,0.3)', textAlign: 'center',
         }}>
           ⚖️ Conteúdo informativo. Não substitui orientação jurídica profissional.
         </span>
@@ -431,40 +693,39 @@ function CtaSlide({ total }: { total: number }) {
 
 // ─── TEMPLATE: LEGADO ────────────────────────────────────────────────────────
 function LegacySlide({ headline, category }: { headline: string; category: string }) {
+  const theme = getTheme(category);
   const emoji = CAT_EMOJI[category] || '📋';
   const label = CAT_LABEL[category] || 'Dica Jurídica';
   return (
     <div style={{
       width: '100%', height: '100%', display: 'flex', flexDirection: 'column',
       justifyContent: 'space-between', alignItems: 'center',
-      backgroundImage: `linear-gradient(155deg, ${C.navyMid} 0%, ${C.navy} 100%)`,
+      backgroundImage: `linear-gradient(155deg, ${theme.bg2} 0%, ${theme.bg1} 100%)`,
       fontFamily: 'Poppins', padding: '64px 60px',
     }}>
       <Logo size="lg" />
 
       <div style={{
         display: 'flex', flexDirection: 'column', alignItems: 'center',
-        background: C.white, borderRadius: '20px',
+        background: WHITE, borderRadius: '20px',
         padding: '48px 56px', width: '100%',
         boxShadow: '0 32px 64px rgba(0,0,0,0.4)',
+        borderTop: `6px solid ${theme.accent}`,
       }}>
         <div style={{
           display: 'flex', alignItems: 'center', gap: '8px',
-          background: C.offWhite, borderRadius: '100px',
+          background: OFFWHITE, borderRadius: '100px',
           padding: '8px 20px', marginBottom: '22px',
         }}>
           <span style={{ fontSize: '22px' }}>{emoji}</span>
-          <span style={{
-            fontFamily: 'Poppins', fontWeight: 600,
-            fontSize: '17px', color: C.navyLight,
-          }}>
+          <span style={{ fontFamily: 'Poppins', fontWeight: 600, fontSize: '17px', color: GRAY700 }}>
             {label}
           </span>
         </div>
         <div style={{
           fontFamily: 'Poppins', fontWeight: 800,
           fontSize: headline.length > 40 ? '38px' : '48px',
-          color: C.gray900, textAlign: 'center',
+          color: GRAY900, textAlign: 'center',
           lineHeight: 1.2, letterSpacing: '-0.8px',
         }}>
           {headline}
@@ -472,17 +733,11 @@ function LegacySlide({ headline, category }: { headline: string; category: strin
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
-        <span style={{
-          fontFamily: 'Poppins', fontWeight: 600,
-          fontSize: '20px', color: 'rgba(255,255,255,0.9)',
-        }}>
+        <span style={{ fontFamily: 'Poppins', fontWeight: 600, fontSize: '20px', color: 'rgba(255,255,255,0.9)' }}>
           Analise seu contrato gratuitamente com IA
         </span>
-        <span style={{
-          fontFamily: 'Poppins', fontSize: '16px',
-          color: 'rgba(255,255,255,0.45)',
-        }}>
-          https://contrato-seguro-inky.vercel.app
+        <span style={{ fontFamily: 'Poppins', fontSize: '16px', color: 'rgba(255,255,255,0.45)' }}>
+          {APP_URL_DISPLAY}
         </span>
       </div>
     </div>
@@ -496,7 +751,6 @@ export async function GET(
 ) {
   void params;
 
-  // Carregar fontes Poppins do servidor local
   const base = request.nextUrl.origin;
   const [fontRegular, fontBold, fontExtraBold, fontSemiBold] = await Promise.all([
     fetch(`${base}/fonts/Poppins-Regular.ttf`).then(r => r.arrayBuffer()),
@@ -514,6 +768,8 @@ export async function GET(
 
   const p           = request.nextUrl.searchParams;
   const type        = p.get('type') || '';
+  const category    = p.get('category') || 'geral';
+  const badge       = p.get('badge') || 'dica';
   const title       = p.get('title') || '';
   const subtitle    = p.get('subtitle') || '';
   const number      = p.get('number') || '1';
@@ -522,17 +778,28 @@ export async function GET(
   const current     = parseInt(p.get('current') || '0', 10);
   const total       = parseInt(p.get('total') || '7', 10);
   const headline    = p.get('headline') || 'Proteja seus direitos';
-  const category    = p.get('category') || 'geral';
-  const badgeText   = BADGE_MAP[p.get('badge') || 'dica'] || 'DICA JURÍDICA';
+  const badgeText   = BADGE_MAP[badge] || 'DICA JURÍDICA';
+
+  const theme = getTheme(category);
 
   let jsx: React.ReactElement;
 
   if (type === 'cover') {
-    jsx = <CoverSlide title={title} subtitle={subtitle} current={current} total={total} badgeText={badgeText} />;
+    if (badge === 'pergunta') {
+      jsx = <CoverPergunta title={title} subtitle={subtitle} current={current} total={total} theme={theme} />;
+    } else if (badge === 'mito_verdade') {
+      jsx = <CoverMitoVerdade title={title} subtitle={subtitle} current={current} total={total} theme={theme} />;
+    } else if (badge === 'estatistica') {
+      jsx = <CoverEstatistica title={title} subtitle={subtitle} current={current} total={total} theme={theme} />;
+    } else if (badge === 'caso_real') {
+      jsx = <CoverCasoReal title={title} subtitle={subtitle} current={current} total={total} theme={theme} />;
+    } else {
+      jsx = <CoverSlide title={title} subtitle={subtitle} current={current} total={total} badgeText={badgeText} theme={theme} />;
+    }
   } else if (type === 'item') {
-    jsx = <ItemSlide number={number} title={title} description={description} law={law} current={current} total={total} />;
+    jsx = <ItemSlide number={number} title={title} description={description} law={law} current={current} total={total} theme={theme} />;
   } else if (type === 'cta') {
-    jsx = <CtaSlide total={total} />;
+    jsx = <CtaSlide total={total} theme={theme} />;
   } else {
     jsx = <LegacySlide headline={headline} category={category} />;
   }

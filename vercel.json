@@ -2,7 +2,11 @@
   "crons": [
     {
       "path": "/api/cron/social",
-      "schedule": "0 12,22 * * *"
+      "schedule": "0 22 * * 1,3,5"
+    },
+    {
+      "path": "/api/cron/social-story",
+      "schedule": "0 14 * * 2,4,6"
     },
     {
       "path": "/api/cron/cleanup",

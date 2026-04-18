@@ -24,17 +24,16 @@ export async function GET(request: NextRequest) {
   const dryRun = request.nextUrl.searchParams.get('dryRun') === 'true';
   const force = request.nextUrl.searchParams.get('force') === 'true';
 
-  // Estratégia 5 posts/semana: seg/qua/sex 9h BRT + ter/sex 19h BRT
-  // Cron roda 12h e 22h UTC todos os dias — lógica interna decide se posta
+  // Estratégia 3 posts/semana: seg/qua/sex às 22h UTC (19h BRT)
+  // Horário noturno concentra maior engajamento pré-dormir.
+  // Reduzido de 5→3 enquanto audiência é baixa (evita desperdício criativo).
   if (!force && !dryRun) {
     const now = new Date();
     const hourUtc = now.getUTCHours();
     const dayOfWeek = now.getUTCDay(); // 0=domingo, 6=sábado
-    const shouldPost =
-      (hourUtc === 12 && [1, 3, 5].includes(dayOfWeek)) ||
-      (hourUtc === 22 && [2, 5].includes(dayOfWeek));
+    const shouldPost = hourUtc === 22 && [1, 3, 5].includes(dayOfWeek);
     if (!shouldPost) {
-      return NextResponse.json({ skipped: true, reason: 'horário não é slot de posting' });
+      return NextResponse.json({ skipped: true, reason: 'horário não é slot de posting (seg/qua/sex 19h BRT)' });
     }
   }
 
