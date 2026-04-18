@@ -14,9 +14,9 @@ export const dynamic = 'force-dynamic';
 const DAY_NAMES = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
 
 function authorized(request: NextRequest): boolean {
-  const secret = process.env.ADMIN_SECRET;
+  const secret = process.env.ADMIN_SECRET?.trim();
   if (!secret) return false;
-  const authHeader = request.headers.get('authorization');
+  const authHeader = request.headers.get('authorization')?.trim();
   if (authHeader === `Bearer ${secret}`) return true;
   return false;
 }

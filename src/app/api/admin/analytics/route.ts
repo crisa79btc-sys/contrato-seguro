@@ -4,10 +4,10 @@ import { getAdminClient } from '@/lib/db/supabase';
 export const dynamic = 'force-dynamic';
 
 function authorized(request: NextRequest): boolean {
-  const secret = process.env.ADMIN_SECRET;
+  const secret = process.env.ADMIN_SECRET?.trim();
   if (!secret) return false;
 
-  const authHeader = request.headers.get('authorization');
+  const authHeader = request.headers.get('authorization')?.trim();
   if (authHeader === `Bearer ${secret}`) return true;
 
   return false;
