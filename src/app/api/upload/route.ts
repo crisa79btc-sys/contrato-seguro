@@ -9,6 +9,7 @@ import { store } from '@/lib/store';
 import { classifyContract } from '@/lib/ai/classifier';
 import { analyzeContract } from '@/lib/ai/analyzer';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { getCurrentUser } from '@/lib/auth/current-user';
 
 // Magic bytes
 const MAGIC_BYTES: Record<string, number[]> = {
@@ -30,7 +31,7 @@ function validateMagicBytes(buffer: Buffer, mimeType: string): boolean {
 export async function POST(request: NextRequest) {
   // Rate limiting: 10 uploads por hora por IP
   const ip = getClientIp(request);
-  const rl = checkRateLimit({ name: 'upload', key: ip, maxRequests: 10, windowSeconds: 3600 });
+  const rl = await checkRateLimit({ name: 'upload', key: ip, maxRequests: 10, windowSeconds: 3600 });
   if (!rl.allowed) {
     return NextResponse.json(
       { error: 'Muitas análises em pouco tempo. Tente novamente em alguns minutos.', code: 'RATE_LIMITED' },
@@ -107,12 +108,16 @@ export async function POST(request: NextRequest) {
     // Gerar ID e salvar no store
     const contractId = randomUUID();
 
+    // Associar ao user_id se logado (usuário anônimo: user_id ficará null)
+    const currentUser = await getCurrentUser();
+
     await store.createContract({
       id: contractId,
       original_text: text,
       original_filename: file.name,
       file_size_bytes: file.size,
       page_count: pageCount,
+      user_id: currentUser?.id,
     });
 
     // Disparar análise em background (waitUntil garante que Vercel não mata o processo)
@@ -154,15 +159,19 @@ async function processContract(contractId: string) {
   // Etapa 1: Classificação
   await store.updateContract(contractId, { status: 'classifying' });
 
+  // Captura o tipo localmente para passar ao analyzer (evita query extra ao DB)
+  let contractType: string | null = null;
   try {
     const { classification } = await classifyContract(contract.original_text);
+    contractType = classification.type ?? null;
     await store.updateContract(contractId, {
       status: 'classified',
-      contract_type: classification.type,
+      contract_type: contractType,
       classification_result: classification,
     });
   } catch (err) {
     console.error(`Erro na classificação do contrato ${contractId}:`, err);
+    contractType = 'outro';
     await store.updateContract(contractId, {
       status: 'classified',
       contract_type: 'outro',
@@ -173,7 +182,7 @@ async function processContract(contractId: string) {
   await store.updateContract(contractId, { status: 'analyzing' });
 
   try {
-    const { analysis, usage } = await analyzeContract(contract.original_text, 'free');
+    const { analysis, usage } = await analyzeContract(contract.original_text, 'free', contractType);
 
     await store.updateContract(contractId, {
       status: 'analyzed',

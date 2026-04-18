@@ -1,6 +1,60 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createHmac, timingSafeEqual } from 'crypto';
 import { getPaymentDetails, mapPaymentStatus } from '@/lib/payment/mercadopago';
 import { store } from '@/lib/store';
+
+/**
+ * Valida a assinatura HMAC-SHA256 enviada pelo Mercado Pago no header x-signature.
+ * Formato do header: ts=<timestamp>,v1=<hash>
+ * O manifest é: id:<paymentId>;request-id:<xRequestId>;ts:<ts>;
+ *
+ * Docs: https://www.mercadopago.com.br/developers/pt/docs/your-integrations/notifications/webhooks#bookmark_validacao_de_assinatura
+ */
+function validateMercadoPagoSignature(request: NextRequest, paymentId: string): boolean {
+  const webhookSecret = process.env.MERCADO_PAGO_WEBHOOK_SECRET;
+  if (!webhookSecret) {
+    // Dev local (NODE_ENV !== 'production'): permitir para facilitar testes.
+    // Produção: REJEITAR (fail-closed) para evitar fraude de pagamento.
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('[Webhook] MERCADO_PAGO_WEBHOOK_SECRET ausente — aceito apenas em dev');
+      return true;
+    }
+    console.error('[Webhook] MERCADO_PAGO_WEBHOOK_SECRET ausente em produção — REJEITANDO');
+    return false;
+  }
+
+  const xSignature = request.headers.get('x-signature');
+  const xRequestId = request.headers.get('x-request-id') ?? '';
+
+  if (!xSignature) {
+    console.error('[Webhook] Header x-signature ausente');
+    return false;
+  }
+
+  // Extrair ts e v1 do header
+  const parts = Object.fromEntries(xSignature.split(',').map((p) => p.split('=')));
+  const ts = parts['ts'];
+  const v1 = parts['v1'];
+
+  if (!ts || !v1) {
+    console.error('[Webhook] x-signature malformado:', xSignature);
+    return false;
+  }
+
+  // Construir manifest
+  const manifest = `id:${paymentId};request-id:${xRequestId};ts:${ts};`;
+
+  // Calcular HMAC-SHA256
+  const expected = createHmac('sha256', webhookSecret).update(manifest).digest('hex');
+
+  try {
+    // Comparação em tempo constante para evitar timing attacks
+    return timingSafeEqual(Buffer.from(expected, 'hex'), Buffer.from(v1, 'hex'));
+  } catch {
+    console.error('[Webhook] Erro na comparação de assinaturas');
+    return false;
+  }
+}
 
 /**
  * POST /api/payment/webhook
@@ -26,6 +80,12 @@ export async function POST(request: NextRequest) {
     const paymentId = body.data?.id;
     if (!paymentId) {
       return NextResponse.json({ received: true });
+    }
+
+    // Validar assinatura HMAC-SHA256 antes de processar
+    if (!validateMercadoPagoSignature(request, String(paymentId))) {
+      console.error('[Webhook] Assinatura inválida para paymentId:', paymentId);
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }
 
     // Consultar detalhes do pagamento na API do MP (fonte de verdade)

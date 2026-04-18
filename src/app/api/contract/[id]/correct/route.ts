@@ -3,6 +3,8 @@ import { waitUntil } from '@vercel/functions';
 import { store } from '@/lib/store';
 import { correctContract } from '@/lib/ai/corrector';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { getCurrentUser } from '@/lib/auth/current-user';
+import { canAccessContract } from '@/lib/auth/contract-access';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,7 +14,7 @@ export async function POST(
 ) {
   // Rate limiting: 5 correções por hora por IP
   const ip = getClientIp(request);
-  const rl = checkRateLimit({ name: 'correct', key: ip, maxRequests: 5, windowSeconds: 3600 });
+  const rl = await checkRateLimit({ name: 'correct', key: ip, maxRequests: 5, windowSeconds: 3600 });
   if (!rl.allowed) {
     return NextResponse.json(
       { error: 'Muitas correções em pouco tempo. Tente novamente em alguns minutos.', code: 'RATE_LIMITED' },
@@ -24,12 +26,22 @@ export async function POST(
   const body = await request.json().catch(() => ({}));
   const requestedClauses = Array.isArray(body?.requested_clauses) ? body.requested_clauses : [];
 
-  const contract = await store.getContract(params.id);
+  const [contract, user] = await Promise.all([
+    store.getContract(params.id),
+    getCurrentUser(),
+  ]);
 
   if (!contract) {
     return NextResponse.json(
       { error: 'Contrato não encontrado.', code: 'NOT_FOUND' },
       { status: 404 }
+    );
+  }
+
+  if (!canAccessContract(contract.user_id, user?.id)) {
+    return NextResponse.json(
+      { error: 'Acesso negado.', code: 'FORBIDDEN' },
+      { status: 403 }
     );
   }
 

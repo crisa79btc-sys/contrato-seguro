@@ -65,9 +65,21 @@ src/
       payment/webhook/route.ts       # POST: webhook do Mercado Pago (notificação)
       cron/social/route.ts           # GET: Vercel Cron — post automático redes sociais
       social/image/[id]/route.tsx    # GET: gera imagem 1080x1080 para posts (Edge Runtime)
+      contract/[id]/chat/route.ts    # GET: histórico do chat | POST: nova pergunta (limite: 20 anon / 100 logado)
+      claim-contracts/route.ts       # POST: vincula contratos anônimos à conta do usuário logado
+  app/
+    entrar/page.tsx                  # Página de login Google OAuth
+    auth/callback/route.ts           # Handler OAuth — troca code por sessão
+    auth/sair/route.ts               # POST: logout
+    minha-biblioteca/page.tsx        # Biblioteca pessoal (Server Component, requer auth)
+  middleware.ts                      # Renova sessão Supabase em cada request (@supabase/ssr)
   components/
-    ui/Header.tsx                   # Header com logo
+    ui/Header.tsx                   # Header com logo + botão Entrar/UserMenu (Server Component)
     ui/Footer.tsx                   # Footer com disclaimer
+    auth/UserMenu.tsx               # Dropdown de usuário logado (Client Component)
+    auth/ClaimAnonymousPrompt.tsx   # Banner para vincular contratos anônimos à conta
+    chat/ChatPanel.tsx              # Interface de chat com o contrato (Client Component)
+    chat/MessageBubble.tsx          # Bubble individual de mensagem
     upload/FileUpload.tsx           # Upload drag-drop + validação (PDF, JPG, PNG, WebP)
     analysis/RiskScore.tsx          # Gauge circular animado do score 0-100
     analysis/IssueCard.tsx          # Card de problema (com modo locked + stagger)
@@ -96,6 +108,10 @@ src/
     social/gemini-image.ts          # Geração de imagens via Gemini 2.0 Flash (gratuito)
     social/image-storage.ts         # Upload de imagens para Supabase Storage
     db/supabase.ts                  # Client Supabase (lazy, admin + public)
+    supabase/server.ts              # Client Supabase SSR server-side (@supabase/ssr)
+    supabase/client.ts              # Client Supabase SSR browser (@supabase/ssr)
+    auth/current-user.ts            # getCurrentUser(): User | null (server-side)
+    ai/chat.ts                      # askContract() — chat com o contrato (Haiku + prompt caching)
     store.ts                        # Store dual-mode: Supabase (schema 001 normalizado) ou memória (dev)
     local-history.ts                # Histórico local no localStorage
   config/constants.ts               # Constantes, modelos IA, feature flags
@@ -111,8 +127,11 @@ docs/
   database/001_initial_schema.sql   # Schema ativo no Supabase (9 tabelas + RLS)
   database/002_beta_simplified.sql  # Schema alternativo (NÃO usado — mantido como referência)
   database/003_storage_social_images.sql # Bucket Storage para imagens sociais (Gemini)
+  database/004_chat_and_auth.sql    # Chat + autenticação Google OAuth
+  database/005_analyzer_learnings.sql # Tabela analyzer_learnings (IA aprende com usuários)
+  database/006_reels.sql            # Tabelas reels_queue + reels_posts + buckets Storage
   database/README.md                # Como aplicar migrações
-  prompts/system-analyzer.md        # Prompt do analisador (com jurisprudência pacificada)
+  prompts/system-analyzer.md        # Prompt do analisador (com learnings dinâmicos injetados)
   prompts/system-classifier.md      # Prompt do classificador
   prompts/system-corrector.md       # Prompt do corretor (com jurisprudência + legal_notes)
   prompts/system-negotiation.md     # Prompt de negociação (não implementado)
@@ -120,6 +139,8 @@ docs/
   api/README.md                     # Documentação das rotas de API
   api/realtime.md                   # Documentação Supabase Realtime
   dependencies.md                   # Lista de dependências com justificativa
+  SONNET-INSTRUCTIONS.md            # Roteiro de implementação para o Sonnet
+  SPRINT-3-DOMAIN.md                # Guia passo-a-passo de configuração de domínio
 ```
 
 ## Fluxo Atual (MVP Beta)
@@ -223,12 +244,106 @@ GEMINI_API_KEY=            # Google AI Studio (gratuito: 500 img/dia)
 3. Conectar Instagram Business
 4. Configurar variáveis no Vercel
 
+## Chat com o Contrato + Biblioteca Pessoal (implementado 2026-04-13)
+
+Sistema de chat multi-turn com o contrato + autenticação Google OAuth:
+- Google OAuth via Supabase Auth (login opcional — upload anônimo continua)
+- Tabela `chat_messages` com RLS + função `claim_anonymous_contracts`
+- Endpoint `POST /api/contract/[id]/chat` com prompt caching (90% off nos tokens de input)
+- Limites: 20 perguntas/contrato anônimo, 100 logado (controlado por contagem na tabela)
+- Rate limit: 10 perguntas/min por IP
+- `GET /api/contract/[id]/chat` retorna histórico para montar UI
+- Header atualizado: botão "Entrar" ou avatar com dropdown
+- Página `/minha-biblioteca` lista contratos do usuário (requer login)
+- Upload logado associa `user_id` automaticamente ao contrato
+- ClaimAnonymousPrompt: vincula contratos do localStorage à conta após login
+
+### Variáveis de ambiente adicionadas
+```env
+NEXT_PUBLIC_SITE_URL=   # URL do site (sem barra final) — usado no redirect OAuth
+```
+
+### Setup pendente do usuário (uma vez)
+1. Aplicar migração `docs/database/004_chat_and_auth.sql` no SQL Editor do Supabase
+2. Supabase Dashboard → Authentication → Providers → Google: habilitar + colar Client ID/Secret
+3. Google Cloud Console: criar OAuth Client ID (Web app) com redirect `https://wdsfemqjwgdfrqedvqyh.supabase.co/auth/v1/callback`
+4. Supabase → Authentication → URL Configuration: Site URL + Redirect URL `https://contrato-seguro-inky.vercel.app/auth/callback`
+5. Vercel: adicionar env var `NEXT_PUBLIC_SITE_URL=https://contrato-seguro-inky.vercel.app`
+
+## IA aprende com usuários (implementado 2026-04-13)
+
+Cron semanal (domingos 03h UTC) agrega perguntas do chat e extrai padrões de dúvida:
+- Tabela `analyzer_learnings` — padrões com status pending/approved/rejected
+- Cron `/api/cron/learn` — Claude Haiku extrai padrões de perguntas reais
+- Painel `/admin/learnings` — aprovar/rejeitar padrões manualmente (ADMIN_SECRET)
+- `src/lib/ai/analyzer.ts` — injeta learnings aprovados no system prompt dinamicamente
+
+**Migrações pendentes de aplicação no Supabase:**
+- `docs/database/005_analyzer_learnings.sql`
+- `docs/database/006_reels.sql`
+
+## Canal de Reels automatizado (implementado 2026-04-13)
+
+Pipeline completo: iPhone 16 → Supabase Storage → Whisper → Claude → Shotstack → IG/FB/YT.
+
+Novas rotas:
+- `POST /api/admin/reels/upload` — upload vídeo cru (autenticado via ADMIN_SECRET)
+- `GET  /api/admin/reels/queue` — listar fila com filtros
+- `PATCH /api/admin/reels/queue/[id]` — editar copy / agendar / publicar agora / cancelar
+- `POST /api/reels/process/[id]` — pipeline: Whisper → Claude → Shotstack → thumbnail
+- `GET  /api/cron/reels-publish` — cron ter/sex 22h UTC (19h BRT) — publica IG+FB+YT
+- `GET  /api/cron/reels-metrics` — cron diário 12:30 UTC — atualiza views/likes
+
+Novas páginas admin:
+- `/admin/reels/upload` — upload + contexto opcional
+- `/admin/reels/queue` — revisar, editar, aprovar e agendar reels
+
+Novas libs:
+- `src/lib/reels/` — types, whisper, transcription-analyzer, video-processor (Shotstack),
+  thumbnail-generator (sharp), scheduler, music-library, hashtag-optimizer,
+  platforms/{instagram, facebook, youtube}
+
+Novas variáveis necessárias:
+```env
+REPLICATE_API_TOKEN=     # Whisper (transcrição)
+SHOTSTACK_API_KEY=       # Edição de vídeo (free tier: 20min/mês)
+YOUTUBE_CLIENT_ID=
+YOUTUBE_CLIENT_SECRET=
+YOUTUBE_REFRESH_TOKEN=
+YOUTUBE_API_KEY=         # Apenas leitura de métricas
+ADMIN_SECRET=            # Autenticação das rotas /admin/reels/*
+```
+
+Novos buckets no Supabase Storage:
+- `reels-raw` (privado) — vídeos crus do iPhone
+- `reels-ready` (público) — vídeos editados + thumbnails
+
+**Trilhas de fundo:** baixar 10 MP3 royalty-free (Pixabay) para `public/audio/`
+(ver `public/audio/README.md`)
+
 ## Próximas Fases
 
-- **Fase 1.5 (atual):** Configurar Meta Developer + ativar automação social
-- **Fase 2:** Ativar Mercado Pago + cobrar pelo download corrigido (backend pronto, falta UI + conta MP)
-- **Fase 3:** Tipos especializados + biblioteca de modelos + blog SEO + auth
-- **Fase 4:** API pública + testes A/B + otimização de custos
+- **Imediato:** aplicar SQL 005 e 006, configurar ADMIN_SECRET + REPLICATE + SHOTSTACK no Vercel
+- **Reels:** criar conta Replicate e Shotstack, baixar trilhas, testar E2E com vídeo real
+- **Domínio:** registrar contratoseguro.com.br (guia completo em docs/SPRINT-3-DOMAIN.md)
+- **Pagamento:** ativar Mercado Pago + BILLING_ENABLED=true (backend pronto)
+
+## Env Vars Obrigatórias em Produção
+
+Antes de ativar features no Vercel, confirmar que estão configuradas:
+
+| Variável | Uso | Como gerar/obter |
+|---|---|---|
+| `ADMIN_SECRET` | Rotas /admin/* e /api/admin/* | `openssl rand -hex 32` |
+| `CRON_SECRET` | Autenticação dos crons Vercel | Vercel gera automaticamente |
+| `MERCADO_PAGO_WEBHOOK_SECRET` | Validação HMAC webhook pagamento | Gerar no painel Mercado Pago → Webhooks |
+| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | Rate limiter distribuído | Vercel Dashboard → Storage → Upstash → criadas automaticamente |
+| `ANTHROPIC_API_KEY` | Claude API | https://console.anthropic.com |
+| `SUPABASE_SERVICE_ROLE_KEY` | Backend Supabase | Supabase Dashboard → Project Settings → API |
+| `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Frontend Supabase | Supabase Dashboard → Project Settings → API |
+| `NEXT_PUBLIC_SITE_URL` | Redirect OAuth | URL do site sem barra final |
+
+Sem essas, o build passa mas features quebram em runtime.
 
 ## Regras Importantes
 
