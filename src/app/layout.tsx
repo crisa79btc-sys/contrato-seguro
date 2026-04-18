@@ -114,42 +114,34 @@ function FaqJsonLd() {
     mainEntity: [
       {
         '@type': 'Question',
+        name: 'Vale a pena pagar R$ 9,90 pela correção?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Sim. Um advogado cobra de R$ 300 a R$ 1.000 para revisar um contrato. Uma única cláusula abusiva escondida pode custar milhares em processos ou multas indevidas. R$ 9,90 se paga na primeira cláusula corrigida.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'Como posso confiar que a análise é correta?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'A IA cita artigo específico da lei em cada problema apontado (CC, CDC, CLT, etc.) — você pode verificar cada citação. Também integra jurisprudência pacificada do STF, STJ e TST. Mesmo assim, para decisões críticas, sempre recomendamos revisão por um advogado.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'Meus dados ficam seguros?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Sim. Documentos são criptografados (AES-256), excluídos automaticamente em 7 dias e nunca usados para treinar modelos. Somos conformes com a LGPD. Nenhum humano tem acesso ao seu contrato — apenas a IA, pelo tempo estritamente necessário para a análise.',
+        },
+      },
+      {
+        '@type': 'Question',
         name: 'O ContratoSeguro substitui um advogado?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'Não. O ContratoSeguro é uma ferramenta de apoio que utiliza inteligência artificial para identificar possíveis riscos. Para decisões jurídicas importantes, recomendamos sempre consultar um advogado.',
-        },
-      },
-      {
-        '@type': 'Question',
-        name: 'A análise de contrato é gratuita?',
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: 'Sim, a análise é totalmente gratuita. Você faz upload do seu contrato em PDF e recebe o resultado em minutos, sem custo.',
-        },
-      },
-      {
-        '@type': 'Question',
-        name: 'Meu contrato é armazenado?',
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: 'Seus documentos são criptografados e excluídos automaticamente após 7 dias. Não utilizamos seus contratos para treinar modelos de IA nem compartilhamos com terceiros.',
-        },
-      },
-      {
-        '@type': 'Question',
-        name: 'Funciona para qualquer tipo de contrato?',
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: 'Sim, analisamos qualquer contrato em português brasileiro, com especialização em aluguel, trabalho, prestação de serviço, compra e venda e financiamento.',
-        },
-      },
-      {
-        '@type': 'Question',
-        name: 'A análise tem validade jurídica?',
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: 'A análise é um instrumento informativo e educacional, não um parecer jurídico. Ela identifica padrões e compara com a legislação brasileira para apontar possíveis riscos.',
+          text: 'Não — e nem queremos substituir. Somos uma ferramenta de apoio que faz em 2 minutos o que levaria horas de leitura. Para litígios, contratos de alto valor ou situações complexas, sempre consulte um advogado. O ContratoSeguro é perfeito para triagem prévia, entender o que está assinando, ou ter uma segunda opinião rápida.',
         },
       },
     ],

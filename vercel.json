@@ -2,11 +2,23 @@
   "crons": [
     {
       "path": "/api/cron/social",
-      "schedule": "0 12 * * *"
+      "schedule": "0 12,22 * * *"
     },
     {
       "path": "/api/cron/cleanup",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/learn",
+      "schedule": "0 3 * * 0"
+    },
+    {
+      "path": "/api/cron/reels-publish",
+      "schedule": "0 22 * * 2,5"
+    },
+    {
+      "path": "/api/cron/reels-metrics",
+      "schedule": "30 12 * * *"
     }
   ]
 }

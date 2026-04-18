@@ -53,6 +53,19 @@ psql "postgresql://postgres.[ref]:[password]@aws-0-sa-east-1.pooler.supabase.com
   -f docs/database/001_initial_schema.sql
 ```
 
+## Migrações Disponíveis
+
+| Arquivo | Descrição |
+|---------|-----------|
+| `001_initial_schema.sql` | Schema completo inicial (tabelas, RLS, funções, seeds) |
+| `002_beta_simplified.sql` | Schema alternativo simplificado (NÃO usar — apenas referência) |
+| `003_storage_social_images.sql` | Bucket para imagens sociais (Gemini) |
+| `004_chat_and_auth.sql` | Tabela `chat_messages` + função `claim_anonymous_contracts` |
+
+**Para aplicar a 004:** acesse o SQL Editor do Supabase e execute `004_chat_and_auth.sql` após a 001 já estar aplicada. Verificar com `SELECT * FROM public.chat_messages LIMIT 0;`.
+
+---
+
 ## O Que a Migração 001 Cria
 
 ### Tabelas

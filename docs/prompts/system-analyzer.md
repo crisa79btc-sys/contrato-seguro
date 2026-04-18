@@ -241,6 +241,16 @@ Quando o parâmetro tier for "free", retorne APENAS:
 Limite top_issues a no máximo 3 itens, priorizando por severidade (critical > high > medium > low).
 Inclua missing_clauses apenas se houver cláusulas genuinamente ausentes e relevantes. Máximo 5 itens. Se não houver cláusulas ausentes, retorne missing_clauses como array vazio [].
 </tier_free>
+
+## PADRÕES APRENDIDOS (atenção especial)
+[BLOCO DINÂMICO — injetado em runtime por src/lib/ai/analyzer.ts quando há learnings
+aprovados para o tipo de contrato. Gerado pelo cron /api/cron/learn (domingos 03h UTC)
+e aprovado manualmente em /admin/learnings. Exemplo do que será injetado:]
+
+Estes padrões foram identificados a partir de dúvidas reais de usuários.
+Certifique-se de verificar cada um no contrato analisado:
+1. Em contratos de locação, verificar cláusula de multa proporcional por rescisão antecipada (LI art. 4º)
+2. Em contratos de trabalho, verificar banco de horas com compensação dentro do prazo legal (CLT art. 59)
 ```
 
 ---

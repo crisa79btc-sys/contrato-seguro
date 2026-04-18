@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { store } from '@/lib/store';
 import { isBillingEnabled } from '@/config/constants';
+import { getCurrentUser } from '@/lib/auth/current-user';
+import { canAccessContract } from '@/lib/auth/contract-access';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -9,12 +11,22 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const contract = await store.getContract(params.id);
+  const [contract, user] = await Promise.all([
+    store.getContract(params.id),
+    getCurrentUser(),
+  ]);
 
   if (!contract) {
     return NextResponse.json(
       { error: 'Contrato não encontrado.', code: 'NOT_FOUND' },
       { status: 404 }
+    );
+  }
+
+  if (!canAccessContract(contract.user_id, user?.id)) {
+    return NextResponse.json(
+      { error: 'Acesso negado.', code: 'FORBIDDEN' },
+      { status: 403 }
     );
   }
 

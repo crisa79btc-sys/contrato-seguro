@@ -8,37 +8,65 @@ import { safeParseJSON } from '@/lib/ai/utils';
 import { SOCIAL_MEDIA } from '@/config/constants';
 import type { TopicTemplate, GeneratedPost, CarouselPost } from './types';
 import { FALLBACK_POSTS } from './topics';
+import { buildUtmUrl } from './utm';
 
 const APP_URL = (process.env.NEXT_PUBLIC_APP_URL || 'https://contrato-seguro-inky.vercel.app').trim();
 
-const SYSTEM_PROMPT = `Você é um social media manager especializado em direito contratual brasileiro.
-Sua missão é criar posts educativos, acessíveis e engajantes sobre contratos e direitos.
+function getSystemPrompt(ctaUrl: string): string {
+  return `Você é um social media manager especializado em direito contratual brasileiro.
+Sua missão é criar posts educativos que as pessoas QUEIRAM compartilhar — acessíveis, diretos e com apelo emocional.
 
-REGRAS:
-- Escreva em português brasileiro informal mas profissional
-- Use emojis estrategicamente (2-4 por post)
-- O post deve ter entre 100-250 palavras
-- Inclua SEMPRE um CTA (call-to-action) para: ${APP_URL}
-- Inclua SEMPRE ao final: "⚖️ Conteúdo informativo. Não substitui orientação jurídica profissional."
-- Gere 3-5 hashtags relevantes em português
-- Gere um headline curto (5-8 palavras) para a imagem do post
-- Seja preciso juridicamente — cite artigos de lei quando relevante
-- NUNCA invente leis ou artigos que não existem
+TOM DE VOZ:
+- Português brasileiro jovem e direto, como se fosse conversa no WhatsApp com um amigo
+- Pode usar CAIXA ALTA para dramatizar (com moderação — 1-2x por post)
+- Pode usar gírias moderadas ("pegadinha", "furada", "cair numa arapuca") — NUNCA palavrão
+- Primeira frase é GANCHO: pergunta provocante, dado surpreendente ou situação dramática
+- Evitar jargão jurídico na abertura. O nome da lei só entra DEPOIS de explicar em português normal.
+- Objetivo: provocar reação ("nossa, não sabia!", "já caí nessa!", "vou mandar pra minha mãe")
 
-FORMATO DE RESPOSTA (JSON):
+ESTRUTURA DO POST:
+1. GANCHO (1ª linha) — pergunta ou afirmação chocante
+2. CONTEXTO — o problema em linguagem acessível (2-3 linhas)
+3. DIREITO/LEI — em 1 linha, citando o artigo
+4. CTA ENGAJAMENTO — pergunta para comentar ("já passou por isso?")
+5. CTA SITE — link ${ctaUrl}
+6. DISCLAIMER — "⚖️ Conteúdo informativo. Não substitui orientação jurídica profissional."
+
+EMOJIS:
+- 2-4 por post, estrategicamente colocados (início e separadores)
+- 🔥 😱 ⚠️ 💡 🚨 ✅ ❌ para drama/alerta
+- ⚖️ 📜 📝 para jurídico
+- 👇 💬 para CTAs
+
+TAMANHO: 120-220 palavras.
+
+REGRAS INVIOLÁVEIS:
+- NUNCA invente artigos de lei. Só cite o que você tem certeza (CC, CDC, CLT, CF com artigo correto).
+- Sempre finalize com o disclaimer — é obrigatório.
+- CTA para o site SEMPRE inclui o link ${ctaUrl}.
+
+HASHTAGS: 3-5 em português, mix de alta e média reach (ex: #direito #contratos #direitosdoconsumidor + #direitocontratual #clausulasabusivas).
+
+HEADLINE IMAGEM: 5-8 palavras impactantes para a imagem do post.
+
+FORMATO DE RESPOSTA (JSON, sem markdown):
 {
-  "text": "texto completo do post com emojis e CTA",
-  "hashtags": ["#hashtag1", "#hashtag2", "#hashtag3"],
-  "imageHeadline": "Headline curto para imagem"
+  "text": "texto completo do post",
+  "hashtags": ["#hashtag1", "#hashtag2"],
+  "imageHeadline": "Headline impactante"
+}`;
 }
-
-Retorne APENAS o JSON, sem markdown ou explicações.`;
 
 /**
  * Gera um post para redes sociais com base no tema fornecido.
  */
-export async function generateSocialPost(topic: TopicTemplate): Promise<GeneratedPost> {
+export async function generateSocialPost(
+  topic: TopicTemplate,
+  platform: 'instagram' | 'facebook' | 'youtube' = 'instagram',
+  medium: 'post' | 'carousel' | 'reel' | 'story' = 'post'
+): Promise<GeneratedPost> {
   try {
+    const ctaUrl = buildUtmUrl({ source: platform, medium, campaign: topic.key || 'generic' });
     const typeInstructions: Record<string, string> = {
       dica: 'Crie um post no formato "Você sabia que..." com uma dica prática.',
       mito_verdade: 'Crie um post no formato "MITO ou VERDADE?" quebrando um mito comum.',
@@ -55,7 +83,7 @@ Gere o post agora.`;
 
     const result = await callClaude({
       model: SOCIAL_MEDIA.AI_MODEL,
-      systemPrompt: SYSTEM_PROMPT,
+      systemPrompt: getSystemPrompt(ctaUrl),
       userPrompt,
       maxTokens: SOCIAL_MEDIA.MAX_TOKENS,
       temperature: 0.7,
@@ -87,8 +115,9 @@ function getRandomFallback(): GeneratedPost {
 const CAROUSEL_SYSTEM_PROMPT = `Você é um social media manager especializado em direito contratual brasileiro.
 Crie carrosséis educativos para Instagram/Facebook com 4 a 7 slides sobre um tema jurídico.
 
+TOM DE VOZ: Português brasileiro jovem e direto — como uma conversa no WhatsApp, não um artigo de jornal.
+
 REGRAS DE CONTEÚDO:
-- Escreva em português brasileiro informal mas preciso juridicamente
 - Cada slide deve ter título curto (máx 6 palavras), descrição (1-2 frases) e base legal REAL
 - Cite apenas artigos que existem (CDC, CLT, CC, CF) — NUNCA invente
 - imageHeadline: 5-7 palavras impactantes para o slide de capa
@@ -100,7 +129,7 @@ REGRAS DA LEGENDA (caption):
                  "Já assinou algo sem ler? Isso pode custar caro. 👇"
 - CONTEÚDO: 3-4 linhas com os pontos principais (pode usar emojis e numeração)
 - PERGUNTA DE ENGAJAMENTO: 1 linha pedindo ao público para comentar experiência ou opinião
-- LINK: 🛡️ Analise seu contrato GRÁTIS: ${APP_URL}
+- LINK: 🛡️ Analise seu contrato GRÁTIS: PLACEHOLDER_UTM_URL
 - DISCLAIMER: ⚖️ Conteúdo informativo. Não substitui orientação jurídica profissional.
 - HASHTAGS: 3-5 tags relevantes em português
 - Total da caption: 150-220 palavras
@@ -127,8 +156,14 @@ Retorne APENAS o JSON, sem markdown ou comentários.`;
 /**
  * Gera um post em formato carrossel para Instagram/Facebook.
  */
-export async function generateCarouselPost(topic: TopicTemplate): Promise<CarouselPost> {
+export async function generateCarouselPost(
+  topic: TopicTemplate,
+  platform: 'instagram' | 'facebook' = 'instagram'
+): Promise<CarouselPost> {
   try {
+    const ctaUrl = buildUtmUrl({ source: platform, medium: 'carousel', campaign: topic.key || 'generic' });
+    const systemPrompt = CAROUSEL_SYSTEM_PROMPT.replace('PLACEHOLDER_UTM_URL', ctaUrl);
+
     const userPrompt = `Tema: ${topic.promptHint}
 Categoria: ${topic.category}
 Tipo: ${topic.type}
@@ -137,7 +172,7 @@ Crie um carrossel educativo sobre este tema. Cada slide deve cobrir um aspecto d
 
     const result = await callClaude({
       model: SOCIAL_MEDIA.AI_MODEL,
-      systemPrompt: CAROUSEL_SYSTEM_PROMPT,
+      systemPrompt,
       userPrompt,
       maxTokens: 1800,
       temperature: 0.65,

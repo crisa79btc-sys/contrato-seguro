@@ -14,6 +14,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 type ContractRecord = {
   id: string;
+  user_id: string | null;
   original_text: string;
   original_filename: string;
   file_size_bytes: number;
@@ -69,9 +70,11 @@ export const store = {
     original_filename: string;
     file_size_bytes: number;
     page_count: number;
+    user_id?: string;
   }): Promise<ContractRecord> {
     const record: ContractRecord = {
       ...data,
+      user_id: data.user_id ?? null,
       contract_type: null,
       status: 'uploaded',
       analysis_result: null,
@@ -82,14 +85,17 @@ export const store = {
     };
 
     if (isSupabaseMode) {
-      const { error } = await supabase!.from('contracts').insert({
+      const insertData: Record<string, unknown> = {
         id: record.id,
         original_text: record.original_text,
         original_filename: record.original_filename,
         file_size_bytes: record.file_size_bytes,
         page_count: record.page_count,
         status: 'uploaded',
-      });
+      };
+      if (data.user_id) insertData.user_id = data.user_id;
+
+      const { error } = await supabase!.from('contracts').insert(insertData);
       if (error) {
         console.error('[Store] Erro ao criar contrato no Supabase:', error.message);
         throw new Error(`Erro ao salvar contrato: ${error.message}`);
@@ -129,6 +135,7 @@ export const store = {
 
       return {
         id: c.id,
+        user_id: c.user_id ?? null,
         original_text: c.original_text ?? '',
         original_filename: c.original_filename ?? '',
         file_size_bytes: c.file_size_bytes ?? 0,

@@ -601,6 +601,160 @@ export const TOPIC_BANK: TopicTemplate[] = [
     type: 'dica',
     promptHint: 'Prazos de prescrição civil: cobrança de dívida prescreve em 5 anos (CC art. 206 §5º, I); responsabilidade civil em 3 anos (CC art. 206 §3º, V). Prescrição pode ser interrompida por notificação ou reconhecimento da dívida.',
   },
+
+  // === PERGUNTAS — engajamento (Tarefa 4.2) ===
+  {
+    key: 'q-aluguel-pegadinha',
+    category: 'aluguel',
+    type: 'pergunta',
+    promptHint: 'Pergunte de forma direta e provocante qual foi a cláusula mais absurda que o usuário já viu em contrato de aluguel. Explique a importância de ler antes de assinar.',
+  },
+  {
+    key: 'q-trabalho-horasextras',
+    category: 'trabalho',
+    type: 'pergunta',
+    promptHint: 'Pergunte se o usuário sabe quando pode recusar hora extra. Cite CLT art. 59 de forma acessível. Incentive comentários com experiências pessoais.',
+  },
+  {
+    key: 'q-consumidor-arrependimento',
+    category: 'consumidor',
+    type: 'pergunta',
+    promptHint: 'Pergunte se o usuário conhece o direito de arrependimento de 7 dias em compras online. Cite CDC art. 49. Incentive quem já usou esse direito a comentar.',
+  },
+  {
+    key: 'q-servico-calote',
+    category: 'servico',
+    type: 'pergunta',
+    promptHint: 'Pergunte se o usuário já prestou um serviço e levou calote. Como se preveniu? Introduza a importância do contrato escrito com multa por inadimplência.',
+  },
+  {
+    key: 'q-digital-termos-leu',
+    category: 'digital',
+    type: 'pergunta',
+    promptHint: 'Pergunte honestamente: você lê os termos de uso antes de clicar em "Aceito"? Revele dados curiosos sobre o comprimento médio dos termos de uso dos apps mais populares.',
+  },
+  {
+    key: 'q-compra-contrato-verbal',
+    category: 'compra_venda',
+    type: 'pergunta',
+    promptHint: 'Pergunte se o usuário já fez um negócio de boca que deu errado. Lembre que contrato verbal é válido mas difícil de provar. Incentive comentários sobre experiências.',
+  },
+  {
+    key: 'q-aluguel-cauca-devolvida',
+    category: 'aluguel',
+    type: 'pergunta',
+    promptHint: 'Pergunte se o usuário já teve dificuldade para receber a caução de volta ao sair de um aluguel. Explique o prazo legal de devolução (30 dias) e como se proteger.',
+  },
+  {
+    key: 'q-trabalho-pj-pressao',
+    category: 'trabalho',
+    type: 'pergunta',
+    promptHint: 'Pergunte se o usuário já foi pressionado pelo empregador a abrir CNPJ para trabalhar como PJ em vez de CLT. Explique os riscos da pejotização ilegal.',
+  },
+  {
+    key: 'q-geral-assinou-sem-ler',
+    category: 'geral',
+    type: 'pergunta',
+    promptHint: 'Pergunte honestamente: qual foi o último contrato que você assinou sem ler direito? Crie identificação com o público e introduza por que vale a pena ler antes de assinar.',
+  },
+  {
+    key: 'q-consumidor-cobranca-indevida',
+    category: 'consumidor',
+    type: 'pergunta',
+    promptHint: 'Pergunte se o usuário já foi cobrado por algo que não pediu ou já pagou. Lembre que cobrança indevida exige devolução em dobro (CDC art. 42, parágrafo único).',
+  },
+  {
+    key: 'q-aluguel-vistoria',
+    category: 'aluguel',
+    type: 'pergunta',
+    promptHint: 'Pergunte se o usuário já perdeu o depósito de aluguel por danos que não causou. Explique a importância da vistoria documentada de entrada e saída.',
+  },
+  {
+    key: 'q-servico-orcamento',
+    category: 'servico',
+    type: 'pergunta',
+    promptHint: 'Pergunte se o usuário sabe que orçamento aceito vira contrato e pode ser cobrado em juízo. Incentive comentários sobre experiências com orçamentos que não foram respeitados.',
+  },
+  {
+    key: 'q-geral-multa-abusiva',
+    category: 'geral',
+    type: 'pergunta',
+    promptHint: 'Pergunte ao público: qual a multa mais absurda que já viram em um contrato? Explique que multas desproporcionais podem ser revisadas judicialmente (CC art. 413).',
+  },
+  {
+    key: 'q-consumidor-cancelamento',
+    category: 'consumidor',
+    type: 'pergunta',
+    promptHint: 'Pergunte se o usuário já tentou cancelar um serviço e foi mal atendido ou cobrado multa abusiva. Cite os direitos do consumidor no cancelamento.',
+  },
+  {
+    key: 'q-trabalho-ferias-negadas',
+    category: 'trabalho',
+    type: 'pergunta',
+    promptHint: 'Pergunte se o usuário já teve férias negadas ou adiadas pelo empregador muitas vezes. Explique que férias vencidas precisam ser pagas em dobro (CLT art. 137).',
+  },
+
+  // === ESTATÍSTICAS — dados que impactam (Tarefa 4.2) ===
+  {
+    key: 's-contratos-nao-lidos',
+    category: 'geral',
+    type: 'estatistica',
+    promptHint: 'Pesquisas do Procon e órgãos de defesa do consumidor apontam que a grande maioria dos consumidores assina contratos sem ler o documento completo. Construa um post de impacto sobre o risco disso — use linguagem como "a maioria" ou "a cada 10 brasileiros, 9".',
+  },
+  {
+    key: 's-processos-trabalhistas',
+    category: 'trabalho',
+    type: 'estatistica',
+    promptHint: 'CNJ e Tribunal Superior do Trabalho publicam que o Brasil é um dos países com maior volume de processos trabalhistas por ano, na casa de milhões. Use como gancho para falar de prevenção via contrato bem redigido.',
+  },
+  {
+    key: 's-superendividamento-brasil',
+    category: 'consumidor',
+    type: 'estatistica',
+    promptHint: 'Dados do Banco Central e PEIC/CNC indicam que dezenas de milhões de famílias brasileiras estão endividadas. Use como gancho para falar sobre contratos de crédito e como identificar cláusulas abusivas antes de assinar.',
+  },
+  {
+    key: 's-aluguel-disputas',
+    category: 'aluguel',
+    type: 'estatistica',
+    promptHint: 'Tribunais de Justiça registram grande volume de ações relacionadas a contratos de locação todo ano. Use como motivação para ler o contrato antes de assinar e entender os direitos de ambas as partes.',
+  },
+  {
+    key: 's-pejotizacao-aumento',
+    category: 'trabalho',
+    type: 'estatistica',
+    promptHint: 'IBGE e pesquisas de mercado de trabalho indicam crescimento expressivo no número de MEIs e PJs nos últimos anos. Parte significativa é pejotização. Use como gancho para falar sobre vínculo empregatício disfarçado.',
+  },
+  {
+    key: 's-tempo-processo-judicial',
+    category: 'geral',
+    type: 'estatistica',
+    promptHint: 'CNJ registra que processos cíveis levam em média vários anos para ser resolvidos no Brasil. Use como argumento para resolver conflitos contratuais antes de chegar à Justiça, com contratos bem redigidos.',
+  },
+  {
+    key: 's-clientes-procon',
+    category: 'consumidor',
+    type: 'estatistica',
+    promptHint: 'Procon registra anualmente centenas de milhares de reclamações de consumidores — telecomunicações, bancos e comércio eletrônico lideram. Use como gancho para falar sobre como contratos claros previnem disputas.',
+  },
+  {
+    key: 's-fraude-digital-crescimento',
+    category: 'digital',
+    type: 'estatistica',
+    promptHint: 'Febraban e relatórios de cibersegurança indicam crescimento expressivo de fraudes digitais e golpes online no Brasil ano a ano. Use como alerta para verificar contratos digitais com atenção.',
+  },
+  {
+    key: 's-rescisao-contratual-prejuizo',
+    category: 'servico',
+    type: 'estatistica',
+    promptHint: 'Estudos de mercado indicam que contratos de serviço mal redigidos geram prejuízos expressivos a prestadores e contratantes. Use como argumento para ter contrato escrito com cláusulas claras antes de começar qualquer serviço.',
+  },
+  {
+    key: 's-analise-ia-economia',
+    category: 'geral',
+    type: 'estatistica',
+    promptHint: 'Honorários médios de advogados para análise de contratos variam de centenas a milhares de reais dependendo da complexidade. Compare com o custo da análise automatizada e o valor gerado ao identificar cláusulas abusivas antes de assinar.',
+  },
 ];
 
 /**

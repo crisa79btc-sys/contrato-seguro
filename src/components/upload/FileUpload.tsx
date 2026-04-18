@@ -85,9 +85,9 @@ export default function FileUpload({ onFileSelected, isUploading = false, error 
         onDrop={handleDrop}
         onClick={() => !isUploading && inputRef.current?.click()}
         className={`
-          relative cursor-pointer rounded-2xl border-2 border-dashed p-8 text-center
-          transition-all duration-200
-          ${dragOver ? 'border-brand-400 bg-brand-500/10 scale-[1.02]' : 'border-white/10 bg-white/5 hover:border-brand-400/60 hover:bg-brand-500/10'}
+          relative cursor-pointer rounded-2xl border-2 border-dashed px-6 py-10 sm:p-12 text-center
+          transition-all duration-200 min-h-[180px] flex items-center justify-center
+          ${dragOver ? 'border-brand-400 bg-brand-500/10 scale-[1.02]' : 'border-white/15 bg-white/5 hover:border-brand-400/60 hover:bg-brand-500/10 active:scale-[0.99]'}
           ${isUploading ? 'pointer-events-none opacity-70' : ''}
           ${displayError ? 'border-red-400/50 bg-red-500/10' : ''}
         `}
@@ -117,30 +117,30 @@ export default function FileUpload({ onFileSelected, isUploading = false, error 
             <p className="text-sm font-medium text-slate-300">Enviando contrato...</p>
           </div>
         ) : selectedFile && !displayError ? (
-          <div className="flex flex-col items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-500/20">
-              <svg className="h-6 w-6 text-brand-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+          <div className="flex flex-col items-center gap-3 animate-in fade-in zoom-in-95 duration-300">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/20 ring-2 ring-emerald-500/30">
+              <svg className="h-7 w-7 text-emerald-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
               </svg>
             </div>
             <div>
               <p className="text-sm font-medium text-white">{selectedFile.name}</p>
-              <p className="text-xs text-slate-400">{formatFileSize(selectedFile.size)}</p>
+              <p className="text-xs text-slate-400">{formatFileSize(selectedFile.size)} · pronto para enviar</p>
             </div>
           </div>
         ) : (
-          <div className="flex flex-col items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-500/20">
-              <svg className="h-6 w-6 text-brand-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+          <div className="flex flex-col items-center gap-4">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500/30 to-violet-500/20 ring-1 ring-brand-400/30">
+              <svg className="h-8 w-8 text-brand-300" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
               </svg>
             </div>
             <div>
-              <p className="text-sm font-medium text-white">
-                <span className="text-brand-400 font-semibold">Selecione um arquivo</span>
-                <span className="hidden sm:inline text-slate-300"> ou arraste aqui</span>
+              <p className="text-base font-semibold text-white">
+                <span className="text-brand-300">Toque para selecionar</span>
+                <span className="hidden sm:inline text-slate-300"> ou arraste seu contrato aqui</span>
               </p>
-              <p className="mt-1 text-xs text-slate-500">PDF, JPG, PNG - até {MAX_SIZE_MB}MB</p>
+              <p className="mt-1.5 text-xs text-slate-500">PDF, JPG, PNG ou WebP · até {MAX_SIZE_MB}MB</p>
             </div>
           </div>
         )}

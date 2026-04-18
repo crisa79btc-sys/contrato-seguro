@@ -5,6 +5,8 @@ import { generateCorrectedDocx } from '@/lib/export/docx-corrected';
 import { generateCorrectedPdf } from '@/lib/export/pdf-corrected';
 import { correctionOutputSchema } from '@/schemas/ai-output.schema';
 import { isBillingEnabled } from '@/config/constants';
+import { getCurrentUser } from '@/lib/auth/current-user';
+import { canAccessContract } from '@/lib/auth/contract-access';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
@@ -117,20 +119,29 @@ export async function GET(
 ) {
   console.log(`[Download] Requisição para contractId=${params.id}, format=${request.nextUrl.searchParams.get('format')}`);
 
+  // Verificar acesso antes de buscar dados de correção
+  const [user, contractCheck] = await Promise.all([
+    getCurrentUser(),
+    store.getContract(params.id),
+  ]);
+
+  if (!contractCheck) {
+    return NextResponse.json(
+      { error: 'Contrato não encontrado.', code: 'NOT_FOUND' },
+      { status: 404 }
+    );
+  }
+
+  if (!canAccessContract(contractCheck.user_id, user?.id)) {
+    return NextResponse.json(
+      { error: 'Acesso negado.', code: 'FORBIDDEN' },
+      { status: 403 }
+    );
+  }
+
   const result = await fetchCorrectionData(params.id);
 
   if (!result) {
-    // Verificar se o contrato ao menos existe
-    try {
-      const record = await store.getContract(params.id);
-      if (!record) {
-        return NextResponse.json(
-          { error: 'Contrato não encontrado.', code: 'NOT_FOUND' },
-          { status: 404 }
-        );
-      }
-    } catch { /* ignore */ }
-
     return NextResponse.json(
       { error: 'O contrato ainda não foi corrigido. Clique em "Corrigir contrato" primeiro.', code: 'NOT_CORRECTED' },
       { status: 400 }

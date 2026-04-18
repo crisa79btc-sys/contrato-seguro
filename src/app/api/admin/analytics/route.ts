@@ -7,10 +7,6 @@ function authorized(request: NextRequest): boolean {
   const secret = process.env.ADMIN_SECRET;
   if (!secret) return false;
 
-  // Aceita via query param ou header Authorization
-  const fromQuery = request.nextUrl.searchParams.get('secret');
-  if (fromQuery === secret) return true;
-
   const authHeader = request.headers.get('authorization');
   if (authHeader === `Bearer ${secret}`) return true;
 

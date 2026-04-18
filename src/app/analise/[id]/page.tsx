@@ -7,6 +7,7 @@ import RiskScore from '@/components/analysis/RiskScore';
 import IssueCard from '@/components/analysis/IssueCard';
 import ProcessingStatus from '@/components/analysis/ProcessingStatus';
 import ShareButtons from '@/components/analysis/ShareButtons';
+import ChatPanel from '@/components/chat/ChatPanel';
 import { DISCLAIMER_LEGAL } from '@/config/constants';
 import { addToHistory } from '@/lib/local-history';
 
@@ -336,6 +337,39 @@ export default function AnalisePage({ params }: { params: { id: string } }) {
                 interpretation={data.result.global_score.interpretation}
               />
 
+              {/* CTA de correção — destacado, acima da dobra */}
+              {!hasCorrectionResult && (
+                <div className="overflow-hidden rounded-2xl bg-gradient-to-br from-brand-600 via-brand-500 to-violet-600 p-6 text-white shadow-xl shadow-brand-600/30 sm:p-8">
+                  <div className="flex flex-col items-start gap-6 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h3 className="text-xl font-bold sm:text-2xl">Transforme este contrato em 1 clique</h3>
+                      <p className="mt-2 max-w-md text-sm opacity-90 sm:text-base">
+                        A IA corrige as cláusulas problemáticas, adiciona proteções em falta e gera a versão
+                        final em Word e PDF — pronta para o advogado revisar.
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-start gap-2 sm:items-end">
+                      <button
+                        onClick={handleCorrect}
+                        disabled={correcting}
+                        className="inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-brand-700 shadow-lg transition-all hover:shadow-xl active:scale-[0.98] disabled:opacity-60"
+                      >
+                        {correcting ? 'Processando...' : 'Gerar contrato corrigido'}
+                        {!correcting && (
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                          </svg>
+                        )}
+                      </button>
+                      <p className="text-xs opacity-80">
+                        <span className="font-semibold">Grátis na beta</span>
+                        <span className="opacity-70"> · Será R$ 9,90 em produção</span>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Compartilhar */}
               <ShareButtons
                 score={data.result.global_score.value}
@@ -502,6 +536,9 @@ export default function AnalisePage({ params }: { params: { id: string } }) {
                   downloadError={downloadError}
                 />
               )}
+
+              {/* Chat com o contrato */}
+              <ChatPanel contractId={params.id} contractType={data.contractType} />
 
               {/* Disclaimer */}
               <p className="text-xs leading-relaxed text-gray-400">{DISCLAIMER_LEGAL}</p>

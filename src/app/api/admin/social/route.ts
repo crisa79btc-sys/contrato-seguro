@@ -16,8 +16,6 @@ const DAY_NAMES = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 
 function authorized(request: NextRequest): boolean {
   const secret = process.env.ADMIN_SECRET;
   if (!secret) return false;
-  const fromQuery = request.nextUrl.searchParams.get('secret');
-  if (fromQuery === secret) return true;
   const authHeader = request.headers.get('authorization');
   if (authHeader === `Bearer ${secret}`) return true;
   return false;

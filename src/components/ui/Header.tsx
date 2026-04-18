@@ -1,6 +1,35 @@
+'use client';
+
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { createSupabaseBrowserClient } from '@/lib/supabase/client';
+import UserMenu from '@/components/auth/UserMenu';
+import type { User } from '@supabase/supabase-js';
 
 export default function Header() {
+  const [user, setUser] = useState<User | null>(null);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    const supabase = createSupabaseBrowserClient();
+
+    // Verificar sessão atual
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(data.user ?? null);
+      setLoaded(true);
+    });
+
+    // Escutar mudanças de auth (login/logout)
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setLoaded(true);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   return (
     <header className="sticky top-0 z-50 border-b border-white/5 bg-[#0f0e17]/90 backdrop-blur-sm">
       <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4">
@@ -14,13 +43,31 @@ export default function Header() {
             Contrato<span className="text-brand-400">Seguro</span>
           </span>
         </Link>
-        <nav>
+
+        <nav className="flex items-center gap-4">
           <Link
             href="/blog"
             className="text-sm font-medium text-slate-400 transition-colors hover:text-white"
           >
             Blog
           </Link>
+
+          {/* Só renderiza o botão auth depois que verificou a sessão (evita flash) */}
+          {loaded && (
+            user ? (
+              <UserMenu
+                email={user.email ?? ''}
+                avatarUrl={user.user_metadata?.avatar_url ?? null}
+              />
+            ) : (
+              <Link
+                href="/entrar"
+                className="rounded-lg bg-brand-600 px-3.5 py-1.5 text-sm font-medium text-white transition hover:bg-brand-500"
+              >
+                Entrar
+              </Link>
+            )
+          )}
         </nav>
       </div>
     </header>
