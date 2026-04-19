@@ -30,3 +30,124 @@
     backdrop-filter: blur(12px);
   }
 }
+
+/* =============================================
+   LANDING PAGE v1 — Dossier Editorial
+   ============================================= */
+
+/* Atmospheric radial glows (fixed behind everything) */
+.lp-atmosphere {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
+}
+.lp-atmosphere::before {
+  content: '';
+  position: absolute; top: -15%; left: 50%; transform: translateX(-50%);
+  width: 1200px; height: 900px; border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(139,92,246,0.22), transparent 70%);
+  filter: blur(40px);
+}
+.lp-atmosphere::after {
+  content: '';
+  position: absolute; top: 40%; right: -12%;
+  width: 700px; height: 700px; border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(91,47,201,0.17), transparent 70%);
+  filter: blur(40px);
+}
+
+/* Subtle grid overlay */
+.lp-grid {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+  background-size: 72px 72px;
+  mask-image: radial-gradient(ellipse at 50% 20%, black 10%, transparent 70%);
+  -webkit-mask-image: radial-gradient(ellipse at 50% 20%, black 10%, transparent 70%);
+}
+
+/* Film-grain noise */
+.lp-noise {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.32; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.5 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+
+/* Dossier stamp — circular seal on the preview card */
+.dossier-stamp {
+  position: absolute;
+  top: -20px; right: -10px;
+  width: 96px; height: 96px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(251,113,133,0.6);
+  display: grid; place-items: center;
+  text-align: center;
+  transform: rotate(-8deg);
+  font-size: 10px;
+  line-height: 1.4;
+  color: rgba(251,113,133,0.75);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Hero rule divider */
+.hero-rule-line {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+}
+
+/* Legislation sigil badges */
+.sigil {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 22px; border-radius: 6px;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.04em;
+  background: rgba(139,92,246,0.14);
+  border: 1px solid rgba(139,92,246,0.28);
+  color: rgba(179,157,255,0.85);
+}
+
+/* Section label with leading line */
+.section-label-line::before {
+  content: '';
+  display: inline-block;
+  width: 28px; height: 1px;
+  background: currentColor;
+  vertical-align: middle;
+  margin-right: 12px;
+}
+
+/* Plan featured card glow */
+.plan-featured-glow {
+  box-shadow: 0 0 0 1px rgba(139,92,246,0.32), 0 24px 60px -10px rgba(139,92,246,0.18);
+}
+
+/* Scan animation for "How it works" step 2 */
+@keyframes scan-pulse {
+  0%, 100% { opacity: 0.18; }
+  50%       { opacity: 0.9; }
+}
+.viz-scan-line-hit {
+  animation: scan-pulse 1.8s ease-in-out infinite;
+}
+.viz-scan-line-hit + .viz-scan-line-hit { animation-delay: 0.55s; }
+
+/* Pulsing dot used in various badges */
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(1.45); }
+}
+.pulse-dot {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* FAQ accordion — rotate + to × on open */
+.lp-faq-details summary { list-style: none; }
+.lp-faq-details summary::-webkit-details-marker { display: none; }
+.lp-faq-details summary .lp-faq-icon {
+  transition: transform 0.2s ease;
+  display: inline-block;
+}
+.lp-faq-details[open] summary .lp-faq-icon {
+  transform: rotate(45deg);
+}

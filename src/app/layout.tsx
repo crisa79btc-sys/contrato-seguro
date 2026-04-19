@@ -1,8 +1,30 @@
 import type { Metadata, Viewport } from 'next';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
+import { Instrument_Serif, Inter, JetBrains_Mono } from 'next/font/google';
 import WhatsAppButton from '@/components/ui/WhatsAppButton';
 import './globals.css';
+
+const instrumentSerif = Instrument_Serif({
+  weight: ['400'],
+  style: ['normal', 'italic'],
+  subsets: ['latin'],
+  variable: '--font-display',
+  display: 'swap',
+});
+
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-body',
+  display: 'swap',
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  variable: '--font-mono',
+  weight: ['400', '500', '600'],
+  display: 'swap',
+});
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://contrato-seguro-inky.vercel.app';
 
@@ -162,7 +184,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <JsonLd />
         <FaqJsonLd />
       </head>
-      <body className="min-h-screen bg-white font-sans text-gray-900 antialiased">
+      <body className={`${instrumentSerif.variable} ${inter.variable} ${jetbrainsMono.variable} min-h-screen bg-[#0b0613] antialiased`}>
         {children}
         <Analytics />
         <SpeedInsights />
