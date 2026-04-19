@@ -337,39 +337,6 @@ export default function AnalisePage({ params }: { params: { id: string } }) {
                 interpretation={data.result.global_score.interpretation}
               />
 
-              {/* CTA de correção — destacado, acima da dobra */}
-              {!hasCorrectionResult && (
-                <div className="overflow-hidden rounded-2xl bg-gradient-to-br from-brand-600 via-brand-500 to-violet-600 p-6 text-white shadow-xl shadow-brand-600/30 sm:p-8">
-                  <div className="flex flex-col items-start gap-6 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <h3 className="text-xl font-bold sm:text-2xl">Transforme este contrato em 1 clique</h3>
-                      <p className="mt-2 max-w-md text-sm opacity-90 sm:text-base">
-                        A IA corrige as cláusulas problemáticas, adiciona proteções em falta e gera a versão
-                        final em Word e PDF — pronta para o advogado revisar.
-                      </p>
-                    </div>
-                    <div className="flex flex-col items-start gap-2 sm:items-end">
-                      <button
-                        onClick={handleCorrect}
-                        disabled={correcting}
-                        className="inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-brand-700 shadow-lg transition-all hover:shadow-xl active:scale-[0.98] disabled:opacity-60"
-                      >
-                        {correcting ? 'Processando...' : 'Gerar contrato corrigido'}
-                        {!correcting && (
-                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
-                          </svg>
-                        )}
-                      </button>
-                      <p className="text-xs opacity-80">
-                        <span className="font-semibold">Grátis na beta</span>
-                        <span className="opacity-70"> · Será R$ 9,90 em produção</span>
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
               {/* Compartilhar */}
               <ShareButtons
                 score={data.result.global_score.value}
@@ -473,39 +440,55 @@ export default function AnalisePage({ params }: { params: { id: string } }) {
 
               {/* Correção do contrato */}
               {!hasCorrectionResult && (
-                <div id="correction-section" className="rounded-xl bg-brand-50 p-6 text-center">
-                  <h3 className="text-base font-semibold text-brand-900">
-                    Quer o contrato corrigido?
-                  </h3>
-                  <p className="mt-2 text-sm text-brand-700">
-                    Gere a versão corrigida do seu contrato, com todas as cláusulas
-                    abusivas removidas e proteções adicionadas.
-                  </p>
+                <div
+                  id="correction-section"
+                  className="relative overflow-hidden rounded-2xl p-8 text-center"
+                  style={{ background: 'linear-gradient(135deg, #4c1d95 0%, #7c3aed 50%, #6d28d9 100%)' }}
+                >
+                  {/* glow */}
+                  <div className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(circle at 50% 0%, rgba(167,139,250,0.25) 0%, transparent 70%)' }} />
 
-                  {correctionError && (
-                    <p className="mt-2 text-sm text-red-600">{correctionError}</p>
-                  )}
+                  <div className="relative">
+                    <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-violet-400/40 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-violet-200">
+                      <span className="h-1.5 w-1.5 rounded-full bg-violet-300" />
+                      Transforme este contrato
+                    </div>
 
-                  <button
-                    onClick={handleCorrect}
-                    disabled={correcting}
-                    className={`mt-4 rounded-xl px-6 py-2.5 text-sm font-semibold text-white transition-all ${
-                      correcting
-                        ? 'bg-brand-400 cursor-wait'
-                        : 'bg-brand-600 hover:bg-brand-700 active:scale-95 shadow-lg shadow-brand-600/25'
-                    }`}
-                  >
-                    {correcting ? (
-                      <span className="flex items-center gap-2">
-                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                        Corrigindo contrato...
-                      </span>
-                    ) : selectedMissingClauses.length > 0 ? (
-                      `Corrigir + incluir ${selectedMissingClauses.length} cláusula${selectedMissingClauses.length > 1 ? 's' : ''}`
-                    ) : (
-                      'Corrigir contrato gratuitamente'
+                    <h3 className="text-xl font-bold text-white">
+                      Quer o contrato corrigido?
+                    </h3>
+                    <p className="mt-2 text-sm text-violet-200/90">
+                      Gere a versão corrigida do seu contrato, com todas as cláusulas
+                      abusivas removidas e proteções adicionadas.
+                    </p>
+
+                    {correctionError && (
+                      <p className="mt-3 text-sm text-red-300">{correctionError}</p>
                     )}
-                  </button>
+
+                    <button
+                      onClick={handleCorrect}
+                      disabled={correcting}
+                      className={`mt-5 rounded-xl px-8 py-3 text-sm font-bold text-violet-900 transition-all ${
+                        correcting
+                          ? 'cursor-wait bg-violet-300/60 text-white'
+                          : 'bg-white hover:bg-violet-50 active:scale-95 shadow-xl shadow-black/30'
+                      }`}
+                    >
+                      {correcting ? (
+                        <span className="flex items-center gap-2">
+                          <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                          Corrigindo contrato...
+                        </span>
+                      ) : selectedMissingClauses.length > 0 ? (
+                        `Corrigir + incluir ${selectedMissingClauses.length} cláusula${selectedMissingClauses.length > 1 ? 's' : ''}`
+                      ) : (
+                        'Corrigir contrato gratuitamente'
+                      )}
+                    </button>
+
+                    <p className="mt-3 text-xs text-violet-300/70">Grátis na beta · sem cartão</p>
+                  </div>
                 </div>
               )}
 
