@@ -765,17 +765,17 @@ export default function HomeClient({ totalAnalyzed }: Props) {
           </div>
         </section>
 
-        {/* ——— PRICING ——— */}
+        {/* ——— BETA GRATUITO ——— */}
         <section className="py-28 relative" id="price">
           <div className="mx-auto max-w-[1260px] px-5 sm:px-8">
             <div
               className="section-label-line mb-6 text-xs font-medium"
               style={{ fontFamily: T.monoFont, letterSpacing: '0.2em', textTransform: 'uppercase', color: T.accent }}
             >
-              Planos
+              Acesso
             </div>
             <h2
-              className="mb-14"
+              className="mb-6"
               style={{
                 fontFamily: T.displayFont,
                 fontWeight: 400,
@@ -784,117 +784,45 @@ export default function HomeClient({ totalAnalyzed }: Props) {
                 letterSpacing: '-0.025em',
               }}
             >
-              Primeira análise{' '}
-              <em style={{ fontStyle: 'italic', color: T.accentBright }}>grátis</em>.<br />
-              Escolha o que fizer sentido pra você.
+              Tudo <em style={{ fontStyle: 'italic', color: T.accentBright }}>gratuito</em> durante a beta.
             </h2>
+            <p className="mb-10 text-base sm:text-lg leading-relaxed max-w-xl" style={{ color: T.textMuted }}>
+              Estamos em período de testes. Análise, correção e download estão liberados sem custo enquanto validamos a plataforma com usuários reais.
+            </p>
 
-            <div className="grid gap-6 md:grid-cols-2 max-w-3xl">
-              {/* Avulso */}
-              <div className="p-8 rounded-[20px]" style={{ background: T.bgCard, border: `1px solid ${T.border}` }}>
-                <div className="flex items-center gap-2 mb-5">
-                  <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: T.textMuted }} />
-                  <span
-                    className="text-xs font-semibold uppercase tracking-widest"
-                    style={{ fontFamily: T.monoFont, color: T.textMuted }}
-                  >
-                    Avulso
-                  </span>
-                </div>
-                <h3 className="text-xl font-semibold mb-1">
-                  Por <em style={{ fontFamily: T.displayFont, fontStyle: 'italic', color: T.accentBright }}>correção</em>
-                </h3>
-                <div className="mt-4 mb-1">
-                  <span
-                    className="text-4xl font-bold"
-                    style={{ fontFamily: T.displayFont }}
-                  >
-                    R$ 9,90
-                  </span>
-                </div>
-                <p className="text-xs mb-4" style={{ color: T.textDim }}>por contrato corrigido · sem mensalidade</p>
-                <p className="text-sm mb-6 leading-relaxed" style={{ color: T.textMuted }}>
-                  Ideal pra quem assina contrato uma vez ou outra. Paga só quando precisa.
-                </p>
-                <ul className="space-y-3 mb-7">
-                  {[
-                    'Análise completa — com base legal citada',
-                    'Contrato corrigido — em Word ou PDF',
-                    'Sem fidelidade — pague apenas o que usar',
-                    'Primeira análise grátis — sem cadastro',
-                  ].map(f => (
-                    <li key={f} className="flex items-start gap-3 text-sm">
-                      <svg className="w-4 h-4 mt-0.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke={T.success} strokeWidth="3" strokeLinecap="round">
-                        <polyline points="20 6 9 17 4 12" />
-                      </svg>
-                      <span style={{ color: T.textMuted }}>{f}</span>
-                    </li>
-                  ))}
-                </ul>
-                <a
-                  href="#upload"
-                  className="block text-center text-sm font-medium px-6 py-3.5 rounded-[12px] transition-all hover:-translate-y-px"
-                  style={{ border: `1px solid ${T.borderStrong}`, color: T.text }}
-                >
-                  Analisar um contrato →
-                </a>
+            <div className="max-w-xl p-8 rounded-[20px]" style={{ background: T.bgCard, border: `1px solid rgba(82,211,159,0.25)` }}>
+              <div className="flex items-center gap-2 mb-5">
+                <span className="w-1.5 h-1.5 rounded-full pulse-dot flex-shrink-0" style={{ background: T.success }} />
+                <span className="text-xs font-semibold uppercase tracking-widest" style={{ fontFamily: T.monoFont, color: T.success }}>
+                  Beta aberta
+                </span>
               </div>
-
-              {/* Pessoal — featured */}
-              <div
-                className="p-8 rounded-[20px] plan-featured-glow relative"
+              <ul className="space-y-3 mb-8">
+                {[
+                  'Análise completa — com base legal citada',
+                  'Contrato corrigido — download em Word ou PDF',
+                  'Sem cadastro obrigatório',
+                  'Sem cartão de crédito',
+                ].map(f => (
+                  <li key={f} className="flex items-center gap-3 text-sm">
+                    <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke={T.success} strokeWidth="3" strokeLinecap="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    <span style={{ color: T.textMuted }}>{f}</span>
+                  </li>
+                ))}
+              </ul>
+              <a
+                href="#upload"
+                className="inline-flex items-center gap-2 text-sm font-medium px-6 py-3.5 rounded-[12px] transition-all hover:-translate-y-px"
                 style={{
-                  background: 'linear-gradient(135deg, #1f1040, #17102a)',
-                  border: '1px solid rgba(139,92,246,0.32)',
+                  background: T.accentBtn,
+                  color: '#fff',
+                  boxShadow: `0 1px 0 rgba(255,255,255,0.18) inset, 0 10px 28px -8px ${T.accentGlow}`,
                 }}
               >
-                <div className="flex items-center gap-2 mb-5">
-                  <span className="w-1.5 h-1.5 rounded-full pulse-dot flex-shrink-0" style={{ background: T.accentBright }} />
-                  <span
-                    className="text-xs font-semibold uppercase tracking-widest"
-                    style={{ fontFamily: T.monoFont, color: T.accentBright }}
-                  >
-                    Mais escolhido
-                  </span>
-                </div>
-                <h3 className="text-xl font-semibold mb-1">
-                  Plano <em style={{ fontFamily: T.displayFont, fontStyle: 'italic', color: T.accentBright }}>Pessoal</em>
-                </h3>
-                <div className="mt-4 mb-1 flex items-end gap-1">
-                  <span className="text-4xl font-bold" style={{ fontFamily: T.displayFont }}>R$ 39</span>
-                  <span className="text-lg pb-1" style={{ color: T.textMuted }}>/mês</span>
-                </div>
-                <p className="text-xs mb-4" style={{ color: T.textDim }}>análises ilimitadas · cancele quando quiser</p>
-                <p className="text-sm mb-6 leading-relaxed" style={{ color: T.textMuted }}>
-                  Pra quem assina contratos com frequência — MEIs, consultores, locatários seriais.
-                </p>
-                <ul className="space-y-3 mb-7">
-                  {[
-                    'Análises ilimitadas — quantos contratos quiser',
-                    'Histórico permanente — todas as análises salvas',
-                    'Contraproposta automática — texto pronto para negociar',
-                    'Suporte humano — dúvidas respondidas em 24h',
-                  ].map(f => (
-                    <li key={f} className="flex items-start gap-3 text-sm">
-                      <svg className="w-4 h-4 mt-0.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke={T.success} strokeWidth="3" strokeLinecap="round">
-                        <polyline points="20 6 9 17 4 12" />
-                      </svg>
-                      <span style={{ color: T.textMuted }}>{f}</span>
-                    </li>
-                  ))}
-                </ul>
-                <a
-                  href="#upload"
-                  className="block text-center text-sm font-medium px-6 py-3.5 rounded-[12px] transition-all hover:-translate-y-px"
-                  style={{
-                    background: T.accentBtn,
-                    color: '#fff',
-                    boxShadow: `0 1px 0 rgba(255,255,255,0.18) inset, 0 10px 28px -8px ${T.accentGlow}`,
-                  }}
-                >
-                  Começar com análise grátis →
-                </a>
-              </div>
+                Analisar meu contrato grátis →
+              </a>
             </div>
           </div>
         </section>
