@@ -4,7 +4,6 @@ import { useCallback, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import FileUpload from '@/components/upload/FileUpload';
-import RecentAnalyses from '@/components/history/RecentAnalyses';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
 
@@ -457,11 +456,6 @@ export default function HomeClient({ totalAnalyzed }: Props) {
             </div>
           </div>
         </section>
-
-        {/* ——— RECENT ANALYSES (returning users) ——— */}
-        <div className="relative z-10">
-          <RecentAnalyses />
-        </div>
 
         {/* ——— COMO FUNCIONA ——— */}
         <section className="py-28 relative" id="how">
