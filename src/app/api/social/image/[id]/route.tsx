@@ -3,9 +3,9 @@
  * Design: v1 Dossier Editorial — mesmo visual da landing page.
  *
  * Parâmetros (query string):
- *   type        → cover | item | cta  (legado: omitir = single)
- *   category    → aluguel | trabalho | servico | compra_venda | consumidor | digital | geral
- *   badge       → dica | mito_verdade | checklist | estatistica | pergunta | caso_real
+ *   type        → cover | item | before | after | cta  (legado: omitir = single)
+ *   category    → aluguel | trabalho | servico | compra_venda | consumidor | digital | condominio | geral
+ *   badge       → dica | mito_verdade | checklist | estatistica | pergunta | caso_real | antes_depois
  *   title       → título principal
  *   subtitle    → subtítulo (cover) ou descrição breve (item)
  *   number      → número do item ("1"–"9")
@@ -47,6 +47,7 @@ const CAT_ACCENT: Record<string, string> = {
   compra_venda:'#a855f7',
   consumidor:  '#f43f5e',
   digital:     '#06b6d4',
+  condominio:  '#3b82f6',
   geral:       '#f59e0b',
 };
 const CAT_LABEL: Record<string, string> = {
@@ -56,11 +57,13 @@ const CAT_LABEL: Record<string, string> = {
   compra_venda:'Compra e Venda',
   consumidor:  'Consumidor',
   digital:     'Digital',
+  condominio:  'Condomínio',
   geral:       'Direito',
 };
 const CAT_EMOJI: Record<string, string> = {
   aluguel: '🏠', trabalho: '💼', servico: '🔧',
-  compra_venda: '🤝', consumidor: '🛒', digital: '💻', geral: '⚖️',
+  compra_venda: '🤝', consumidor: '🛒', digital: '💻',
+  condominio: '🏢', geral: '⚖️',
 };
 
 // ─── Badge labels ──────────────────────────────────────────────────────────────
@@ -71,6 +74,7 @@ const BADGE_LABEL: Record<string, string> = {
   estatistica:  'VOCÊ SABIA?',
   pergunta:     'PARA REFLETIR',
   caso_real:    'CASO REAL',
+  antes_depois: 'ANTES / DEPOIS',
 };
 
 // ─── Logo ──────────────────────────────────────────────────────────────────────
@@ -779,6 +783,334 @@ function EstatisticaSlide({
   );
 }
 
+// ─── TEMPLATE: ANTES/DEPOIS — cover ──────────────────────────────────────────
+function AntesDepoisCoverSlide({
+  title, subtitle, current, total, category, accent,
+}: {
+  title: string; subtitle: string; current: number; total: number;
+  category: string; accent: string;
+}) {
+  return (
+    <div style={{
+      width: '100%', height: '100%',
+      background: BG,
+      display: 'flex', flexDirection: 'column',
+      position: 'relative', overflow: 'hidden',
+    }}>
+      {/* Dual glow: red left + green right */}
+      <div style={{
+        position: 'absolute', top: 100, left: -200,
+        width: 700, height: 700, borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(251,113,133,0.12) 0%, transparent 70%)',
+      }} />
+      <div style={{
+        position: 'absolute', top: 100, right: -200,
+        width: 700, height: 700, borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(52,211,153,0.12) 0%, transparent 70%)',
+      }} />
+
+      {/* Split accent strip */}
+      <div style={{
+        position: 'absolute', top: 0, left: 0, right: 0, height: 5, display: 'flex',
+      }}>
+        <div style={{ flex: 1, background: DANGER }} />
+        <div style={{ flex: 1, background: SUCCESS }} />
+      </div>
+
+      {/* Header */}
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        padding: '52px 60px 0', position: 'relative', zIndex: 1,
+      }}>
+        <LogoFull />
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 8,
+          background: 'rgba(139,92,246,0.15)', border: '1px solid rgba(179,157,255,0.35)',
+          borderRadius: 100, padding: '8px 20px',
+        }}>
+          <span style={{ fontSize: 16 }}>⚖️</span>
+          <span style={{
+            fontFamily: 'Poppins', fontWeight: 700, fontSize: 14,
+            color: VIO_BRT, letterSpacing: '1px', textTransform: 'uppercase',
+          }}>
+            ANTES / DEPOIS
+          </span>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div style={{
+        flex: 1, display: 'flex', flexDirection: 'column',
+        justifyContent: 'center', padding: '0 60px', gap: 28,
+        position: 'relative', zIndex: 1,
+      }}>
+        {/* Before / After pills */}
+        <div style={{ display: 'flex', gap: 14 }}>
+          <div style={{
+            padding: '10px 24px', borderRadius: 10,
+            background: 'rgba(251,113,133,0.18)', border: '1px solid rgba(251,113,133,0.4)',
+            fontFamily: 'Poppins', fontWeight: 700, fontSize: 20, color: DANGER,
+          }}>❌ ANTES</div>
+          <div style={{
+            padding: '10px 24px', borderRadius: 10,
+            background: 'rgba(52,211,153,0.18)', border: '1px solid rgba(52,211,153,0.4)',
+            fontFamily: 'Poppins', fontWeight: 700, fontSize: 20, color: SUCCESS,
+          }}>✅ DEPOIS</div>
+        </div>
+
+        <RuleLine accent={VIOLET} />
+
+        <div style={{
+          fontFamily: 'Poppins', fontWeight: 800,
+          fontSize: title.length > 20 ? 68 : 84,
+          color: TEXT, lineHeight: 1.0, letterSpacing: '-2px', maxWidth: 820,
+        }}>
+          {title}
+        </div>
+        <div style={{
+          fontFamily: 'Poppins', fontWeight: 400, fontSize: 27,
+          color: TEXT_MUT, lineHeight: 1.5, maxWidth: 760,
+        }}>
+          {subtitle}
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        padding: '0 60px 52px', position: 'relative', zIndex: 1,
+      }}>
+        <Dots current={current} total={total} accent={VIOLET} />
+        <CatChip category={category} accent={accent} />
+      </div>
+    </div>
+  );
+}
+
+// ─── TEMPLATE: BEFORE (cláusula abusiva) ──────────────────────────────────────
+function BeforeSlide({
+  title, description, law, current, total,
+}: {
+  title: string; description: string; law: string; current: number; total: number;
+}) {
+  return (
+    <div style={{
+      width: '100%', height: '100%',
+      background: '#0d0608',
+      display: 'flex', flexDirection: 'column',
+      position: 'relative', overflow: 'hidden',
+    }}>
+      {/* Red glow */}
+      <div style={{
+        position: 'absolute', top: -150, left: '50%',
+        width: 900, height: 700, borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(220,38,38,0.18) 0%, transparent 65%)',
+        transform: 'translateX(-50%)',
+      }} />
+
+      {/* Red alert strip */}
+      <div style={{
+        position: 'absolute', top: 0, left: 0, right: 0, height: 5,
+        background: 'linear-gradient(90deg, #7f1d1d, #dc2626, #ef4444, #dc2626, #7f1d1d)',
+      }} />
+
+      {/* Header */}
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        padding: '44px 60px 0', position: 'relative', zIndex: 1,
+      }}>
+        <LogoFull size="sm" />
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 8,
+          background: 'rgba(220,38,38,0.2)', border: '1px solid rgba(239,68,68,0.45)',
+          borderRadius: 100, padding: '8px 20px',
+        }}>
+          <span style={{ fontSize: 16 }}>❌</span>
+          <span style={{
+            fontFamily: 'Poppins', fontWeight: 800, fontSize: 16,
+            color: '#fca5a5', letterSpacing: '1.5px',
+          }}>
+            COMO ESTÁ
+          </span>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div style={{
+        flex: 1, display: 'flex', flexDirection: 'column',
+        justifyContent: 'center', padding: '0 60px', gap: 28,
+        position: 'relative', zIndex: 1,
+      }}>
+        {/* Quote decoration */}
+        <div style={{
+          fontFamily: 'Poppins', fontWeight: 800,
+          fontSize: 180, color: 'rgba(220,38,38,0.15)',
+          lineHeight: 0.6, marginBottom: -16, userSelect: 'none',
+        }}>
+          {'"'}
+        </div>
+
+        {/* Clause card */}
+        <div style={{
+          background: 'rgba(220,38,38,0.08)',
+          border: '1px solid rgba(239,68,68,0.3)',
+          borderLeft: '4px solid #dc2626',
+          borderRadius: '0 12px 12px 0',
+          padding: '28px 32px',
+        }}>
+          <div style={{
+            fontFamily: 'Poppins', fontWeight: 500,
+            fontSize: description.length > 180 ? 20 : description.length > 120 ? 23 : 26,
+            color: '#fecaca', lineHeight: 1.55,
+            fontStyle: 'italic',
+          }}>
+            {description}
+          </div>
+        </div>
+
+        {/* Law badge */}
+        {law && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            background: 'rgba(220,38,38,0.12)', border: '1px solid rgba(239,68,68,0.3)',
+            borderRadius: 10, padding: '10px 18px', alignSelf: 'flex-start',
+          }}>
+            <span style={{ fontSize: 16 }}>⚠️</span>
+            <span style={{
+              fontFamily: 'Poppins', fontWeight: 600, fontSize: 17,
+              color: '#f87171', letterSpacing: '0.3px',
+            }}>
+              {law}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        padding: '0 60px 44px', position: 'relative', zIndex: 1,
+        borderTop: '1px solid rgba(220,38,38,0.2)',
+      }}>
+        <Dots current={current} total={total} accent={DANGER} />
+        <span style={{ fontFamily: 'Poppins', fontSize: 16, color: '#6b6181' }}>Deslize →</span>
+      </div>
+    </div>
+  );
+}
+
+// ─── TEMPLATE: AFTER (cláusula corrigida) ─────────────────────────────────────
+function AfterSlide({
+  title, description, law, current, total,
+}: {
+  title: string; description: string; law: string; current: number; total: number;
+}) {
+  return (
+    <div style={{
+      width: '100%', height: '100%',
+      background: '#060d0a',
+      display: 'flex', flexDirection: 'column',
+      position: 'relative', overflow: 'hidden',
+    }}>
+      {/* Green glow */}
+      <div style={{
+        position: 'absolute', top: -150, left: '50%',
+        width: 900, height: 700, borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(16,185,129,0.18) 0%, transparent 65%)',
+        transform: 'translateX(-50%)',
+      }} />
+
+      {/* Green strip */}
+      <div style={{
+        position: 'absolute', top: 0, left: 0, right: 0, height: 5,
+        background: 'linear-gradient(90deg, #064e3b, #10b981, #34d399, #10b981, #064e3b)',
+      }} />
+
+      {/* Header */}
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        padding: '44px 60px 0', position: 'relative', zIndex: 1,
+      }}>
+        <LogoFull size="sm" />
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 8,
+          background: 'rgba(16,185,129,0.18)', border: '1px solid rgba(52,211,153,0.4)',
+          borderRadius: 100, padding: '8px 20px',
+        }}>
+          <span style={{ fontSize: 16 }}>✅</span>
+          <span style={{
+            fontFamily: 'Poppins', fontWeight: 800, fontSize: 16,
+            color: '#6ee7b7', letterSpacing: '1.5px',
+          }}>
+            COMO DEVERIA SER
+          </span>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div style={{
+        flex: 1, display: 'flex', flexDirection: 'column',
+        justifyContent: 'center', padding: '0 60px', gap: 28,
+        position: 'relative', zIndex: 1,
+      }}>
+        {/* Quote decoration */}
+        <div style={{
+          fontFamily: 'Poppins', fontWeight: 800,
+          fontSize: 180, color: 'rgba(16,185,129,0.12)',
+          lineHeight: 0.6, marginBottom: -16, userSelect: 'none',
+        }}>
+          {'"'}
+        </div>
+
+        {/* Corrected clause card */}
+        <div style={{
+          background: 'rgba(16,185,129,0.07)',
+          border: '1px solid rgba(52,211,153,0.3)',
+          borderLeft: '4px solid #10b981',
+          borderRadius: '0 12px 12px 0',
+          padding: '28px 32px',
+        }}>
+          <div style={{
+            fontFamily: 'Poppins', fontWeight: 500,
+            fontSize: description.length > 180 ? 20 : description.length > 120 ? 23 : 26,
+            color: '#a7f3d0', lineHeight: 1.55,
+            fontStyle: 'italic',
+          }}>
+            {description}
+          </div>
+        </div>
+
+        {/* Law badge */}
+        {law && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(52,211,153,0.3)',
+            borderRadius: 10, padding: '10px 18px', alignSelf: 'flex-start',
+          }}>
+            <span style={{ fontSize: 16 }}>⚖️</span>
+            <span style={{
+              fontFamily: 'Poppins', fontWeight: 600, fontSize: 17,
+              color: '#34d399', letterSpacing: '0.3px',
+            }}>
+              {law}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        padding: '0 60px 44px', position: 'relative', zIndex: 1,
+        borderTop: '1px solid rgba(16,185,129,0.18)',
+      }}>
+        <Dots current={current} total={total} accent={SUCCESS} />
+        <span style={{ fontFamily: 'Poppins', fontSize: 16, color: '#6b6181' }}>Deslize →</span>
+      </div>
+    </div>
+  );
+}
+
 // ─── TEMPLATE: LEGADO (post único) ────────────────────────────────────────────
 function LegacySlide({ headline, category }: { headline: string; category: string }) {
   const accent = CAT_ACCENT[category] ?? CAT_ACCENT.geral!;
@@ -885,9 +1217,15 @@ export async function GET(
       jsx = <MitoVerdadeSlide title={title} subtitle={subtitle} current={current} total={total} category={category} accent={accent} />;
     } else if (badge === 'estatistica') {
       jsx = <EstatisticaSlide title={title} subtitle={subtitle} current={current} total={total} category={category} accent={accent} />;
+    } else if (badge === 'antes_depois') {
+      jsx = <AntesDepoisCoverSlide title={title} subtitle={subtitle} current={current} total={total} category={category} accent={accent} />;
     } else {
       jsx = <CoverSlide title={title} subtitle={subtitle} badge={badge} current={current} total={total} category={category} accent={accent} />;
     }
+  } else if (type === 'before') {
+    jsx = <BeforeSlide title={title} description={description} law={law} current={current} total={total} />;
+  } else if (type === 'after') {
+    jsx = <AfterSlide title={title} description={description} law={law} current={current} total={total} />;
   } else if (type === 'item') {
     jsx = <ItemSlide number={number} title={title} description={description} law={law} current={current} total={total} accent={accent} />;
   } else if (type === 'cta') {

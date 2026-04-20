@@ -9,6 +9,7 @@ export type PostCategory =
   | 'compra_venda'
   | 'consumidor'
   | 'digital'
+  | 'condominio'
   | 'geral';
 
 export type PostType =
@@ -17,7 +18,8 @@ export type PostType =
   | 'checklist'
   | 'estatistica'
   | 'pergunta'
-  | 'caso_real';
+  | 'caso_real'
+  | 'antes_depois';
 
 export type TopicTemplate = {
   key: string;

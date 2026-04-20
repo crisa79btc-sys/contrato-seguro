@@ -82,19 +82,27 @@ async function buildCarouselImages(carousel: CarouselPost, topicType: string, to
       filename: `carousel-${timestamp}-0-cover.png`,
     },
     // Slides de conteúdo
-    ...carousel.slides.map((slide, i) => ({
-      params: {
-        type: 'item',
-        category: topicCategory,
-        number: String(i + 1),
-        title: slide.title,
-        description: slide.description,
-        law: slide.law,
-        current: String(i + 1),
-        total: String(total),
-      },
-      filename: `carousel-${timestamp}-${i + 1}-item.png`,
-    })),
+    ...carousel.slides.map((slide, i) => {
+      // antes_depois: slide 0 = before, slide 1 = after, restantes = item normal
+      let slideType = 'item';
+      if (topicType === 'antes_depois') {
+        if (i === 0) slideType = 'before';
+        else if (i === 1) slideType = 'after';
+      }
+      return {
+        params: {
+          type: slideType,
+          category: topicCategory,
+          number: String(i + 1),
+          title: slide.title,
+          description: slide.description,
+          law: slide.law,
+          current: String(i + 1),
+          total: String(total),
+        },
+        filename: `carousel-${timestamp}-${i + 1}-${slideType}.png`,
+      };
+    }),
     // Slide de CTA
     {
       params: {

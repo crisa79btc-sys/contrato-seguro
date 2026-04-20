@@ -11,13 +11,13 @@ import type { TopicTemplate, PostCategory, PostType } from './types';
  * 0 = Domingo, 1 = Segunda, ..., 6 = Sábado (padrão JS getDay())
  */
 export const DAY_OF_WEEK_CALENDAR: Record<number, { category: PostCategory; type: PostType }> = {
-  0: { category: 'consumidor', type: 'caso_real' },     // Dom — caso real que chocou
-  1: { category: 'trabalho',   type: 'dica' },           // Seg — direitos trabalhistas
-  2: { category: 'aluguel',    type: 'checklist' },      // Ter — moradia prática
-  3: { category: 'consumidor', type: 'mito_verdade' },   // Qua — mitos do CDC
-  4: { category: 'digital',    type: 'dica' },           // Qui — contratos digitais
-  5: { category: 'geral',      type: 'pergunta' },       // Sex — engajamento
-  6: { category: 'aluguel',    type: 'caso_real' },      // Sáb — caso real moradia
+  0: { category: 'consumidor',  type: 'caso_real'   },  // Dom — caso real chocante
+  1: { category: 'trabalho',    type: 'dica'        },  // Seg — direitos trabalhistas
+  2: { category: 'aluguel',     type: 'checklist'   },  // Ter — moradia prática
+  3: { category: 'consumidor',  type: 'mito_verdade'},  // Qua — mitos do CDC
+  4: { category: 'digital',     type: 'dica'        },  // Qui — contratos digitais
+  5: { category: 'condominio',  type: 'antes_depois'},  // Sex — antes/depois viral
+  6: { category: 'geral',       type: 'caso_real'   },  // Sáb — caso real clássico
 };
 
 /**
@@ -761,6 +761,180 @@ export const TOPIC_BANK: TopicTemplate[] = [
     category: 'geral',
     type: 'estatistica',
     promptHint: 'Honorários médios de advogados para análise de contratos variam de centenas a milhares de reais dependendo da complexidade. Compare com o custo da análise automatizada e o valor gerado ao identificar cláusulas abusivas antes de assinar.',
+  },
+
+  // === CONDOMÍNIO ===
+  {
+    key: 'condominio-taxa-extra-abusiva',
+    category: 'condominio',
+    type: 'caso_real',
+    promptHint: 'Caso real: síndico cobrou "taxa de obras emergenciais" de R$ 2.000 sem aprovação em assembleia. Ilegal: obras extraordinárias exigem quórum de 2/3 dos condôminos (Lei 4.591/64 art. 22 + CC art. 1.341). Tom: indignação comedida + como contestar.',
+  },
+  {
+    key: 'condominio-multa-desproporcional',
+    category: 'condominio',
+    type: 'dica',
+    promptHint: 'Multa por infração condominial: limite legal de 5 vezes o valor da cota condominial (CC art. 1.336, §2º). Convenção que prevê multas maiores está em desacordo com o Código Civil e pode ser contestada.',
+  },
+  {
+    key: 'condominio-barulho-horario',
+    category: 'condominio',
+    type: 'mito_verdade',
+    promptHint: 'Mito: barulho só é proibido após 22h. Verdade: depende do regulamento interno do condomínio. Em muitos casos obras são proibidas aos finais de semana e o horário pode ser mais restrito que a lei municipal. CC art. 1.336, IV.',
+  },
+  {
+    key: 'condominio-inadimplente-restricoes',
+    category: 'condominio',
+    type: 'mito_verdade',
+    promptHint: 'Mito: condômino inadimplente pode ser impedido de usar áreas comuns. Verdade: STJ pacificou que bloquear acesso à piscina, salão e academia é constrangedor e ilegal (REsp 1.699.022). O condomínio deve cobrar judicialmente.',
+  },
+  {
+    key: 'condominio-obras-sem-aprovacao',
+    category: 'condominio',
+    type: 'checklist',
+    promptHint: '3 tipos de obras e o que cada uma precisa: benfeitorias úteis = quórum 50%+1 em assembleia; benfeitorias voluptuárias = 2/3 dos condôminos; reparações urgentes = síndico age sem consultar. CC art. 1.341.',
+  },
+  {
+    key: 'condominio-animal-proibicao',
+    category: 'condominio',
+    type: 'mito_verdade',
+    promptHint: 'Mito: condomínio pode proibir qualquer animal. Verdade: STJ e STF pacificaram que proibição genérica de animais domésticos é abusiva. O condomínio só pode restringir se houver perturbação real comprovada (RE 1.110.8078/DF).',
+  },
+  {
+    key: 'condominio-locacao-airbnb',
+    category: 'condominio',
+    type: 'dica',
+    promptHint: 'Locar unidade pelo Airbnb em condomínio: sem previsão proibitória na convenção, STJ entende que é permitido (REsp 1.819.075/RS). A convenção pode proibir, mas precisa de quórum de aprovação de 2/3. Locações ocasionais ≠ hospedagem comercial.',
+  },
+  {
+    key: 'condominio-fundo-reserva',
+    category: 'condominio',
+    type: 'dica',
+    promptHint: 'Fundo de reserva condominial: obrigatório por lei, mínimo de 5% do orçamento (convenções podem prever mais). Não pode ser usado para despesas ordinárias — só emergências. Pedir prestação de contas anual é direito do condômino. Lei 4.591/64 art. 9º.',
+  },
+  {
+    key: 'condominio-assembleia-convocacao',
+    category: 'condominio',
+    type: 'checklist',
+    promptHint: 'Checklist da assembleia condominial válida: convocação por escrito com 10 dias de antecedência mínima, pauta pré-definida, local acessível, livro de atas lavrado e assinado. Assembleia irregular pode ser anulada judicialmente. CC art. 1.354.',
+  },
+  {
+    key: 'condominio-taxa-rateio',
+    category: 'condominio',
+    type: 'pergunta',
+    promptHint: 'Você sabe como é calculada a sua cota de condomínio? Pergunte ao público se já questionou o rateio. Explique: pode ser por fração ideal (área da unidade) ou de outra forma prevista na convenção — e isso faz diferença no bolso.',
+  },
+  {
+    key: 'condominio-caso-real-entulho',
+    category: 'condominio',
+    type: 'caso_real',
+    promptHint: 'Caso real: condômino jogou entulho de obra no corredor sem comunicar o síndico. Outros condôminos foram cobrados no rateio do custo de remoção. Ilegal: quem causa o dano responde sozinho. CC art. 186 + 927. Tom: injustiça cotidiana muito conhecida.',
+  },
+
+  // === CASO REAL — novos ===
+  {
+    key: 'caso-real-trabalho-horas',
+    category: 'trabalho',
+    type: 'caso_real',
+    promptHint: 'Caso real: empregado trabalhou 12h/dia durante 2 anos, contrato dizia "banco de horas". Empresa jamais compensou. Condenada a pagar todas as horas como extra (50% adicional). CLT art. 59 §2º + Súmula 291 do TST. Tom: "acharam que você não ia cobrar".',
+  },
+  {
+    key: 'caso-real-servico-fotografo',
+    category: 'servico',
+    type: 'caso_real',
+    promptHint: 'Caso real: fotógrafo sumiu no dia do casamento após receber 100% do pagamento antecipado. Sem contrato com cláusula de multa. Noiva perdeu R$ 4.500 e as fotos do casamento. CC arts. 389-391. Tom: prevenção + o que o contrato correto deveria ter.',
+  },
+  {
+    key: 'caso-real-digital-subs-automatica',
+    category: 'digital',
+    type: 'caso_real',
+    promptHint: 'Caso real: consumidor cancelou assinatura pelo app, mas cobrança continuou por mais 3 meses. Empresa alegou que o cancelamento não foi "concluído". CDC art. 49 parágrafo único: cancelamento DEVE ser pelo MESMO canal da contratação. Cobrança indevida devolve em dobro (CDC art. 42). Tom: cilada clássica.',
+  },
+  {
+    key: 'caso-real-consumidor-garantia-negada',
+    category: 'consumidor',
+    type: 'caso_real',
+    promptHint: 'Caso real: loja negou garantia de geladeira porque consumidor não guardou nota fiscal. Absurdo: garantia legal de 90 dias independe de nota fiscal (CDC art. 26). Nota fiscal é direito do consumidor, não condição para garantia. Tom: armadilha que muita gente cai.',
+  },
+  {
+    key: 'caso-real-geral-clausula-impressa',
+    category: 'geral',
+    type: 'caso_real',
+    promptHint: 'Caso real: contrato com 40 páginas, cláusula de renúncia total a indenizações em fonte minúscula no final. STJ: cláusulas abusivas em contratos de adesão são NULAS mesmo que assinadas (CDC art. 54 §4º). Tom: "letra miúda que ninguém lê mas todos assinam".',
+  },
+  {
+    key: 'caso-real-aluguel-despejo-ilegal',
+    category: 'aluguel',
+    type: 'caso_real',
+    promptHint: 'Caso real: proprietário cortou água e trocou a fechadura do apartamento porque o inquilino atrasou 1 mês de aluguel. Crime: turbação de posse (CC art. 1.210) + estelionato por execução de autotutela. Tom: "locador achou que podia fazer justiça pelas próprias mãos".',
+  },
+  {
+    key: 'caso-real-trabalho-pejotizacao-condenada',
+    category: 'trabalho',
+    type: 'caso_real',
+    promptHint: 'Caso real: empresa de TI contratou 50 desenvolvedores como PJ, todos com horário fixo 9-18h, exclusividade e chefe direto. Ação coletiva na Justiça do Trabalho condenou empresa a pagar FGTS + férias + 13º de todos. CLT arts. 2-3. Tom: "pejotização tem custo alto pra empresa".',
+  },
+  {
+    key: 'caso-real-compra-imovel-irregular',
+    category: 'compra_venda',
+    type: 'caso_real',
+    promptHint: 'Caso real: família comprou imóvel via contrato particular, vendedor morreu sem registrar em cartório. Herdeiros do vendedor entraram na Justiça e ficaram com o imóvel. CC art. 1.245: sem registro em cartório, não é seu. Tom: dramático + alerta urgente.',
+  },
+  {
+    key: 'caso-real-condominio-obra-nao-aprovada',
+    category: 'condominio',
+    type: 'caso_real',
+    promptHint: 'Caso real: síndico aprovou sozinho uma reforma na fachada do prédio de R$ 80.000 sem convocar assembleia. Condôminos recorreram ao Judiciário, obra foi embargada, síndico destituído e obrigado a ressarcir. CC art. 1.348 + Lei 4.591/64. Tom: poder do síndico tem limite.',
+  },
+  {
+    key: 'caso-real-geral-multa-quebrada',
+    category: 'geral',
+    type: 'caso_real',
+    promptHint: 'Caso real: contrato de academia com multa rescisória de R$ 2.400 (12 meses x mensalidade). Consumidor cancelou por ter se mudado de cidade. Juiz reduziu multa a zero: caso fortuito + proporcionalidade (CC art. 413 + CDC art. 51). Tom: multa abusiva cai na Justiça.',
+  },
+
+  // === ANTES/DEPOIS ===
+  {
+    key: 'ad-aluguel-multa-rescisao',
+    category: 'aluguel',
+    type: 'antes_depois',
+    promptHint: 'Antes: "Em caso de rescisão pelo locatário, será devida multa equivalente a 3 meses de aluguel integralmente, independentemente do tempo de permanência." Depois: corrigir para multa proporcional ao tempo restante do contrato (Lei 8.245/91 art. 4º). Explicar por que a cláusula original é nula.',
+  },
+  {
+    key: 'ad-trabalho-banco-horas',
+    category: 'trabalho',
+    type: 'antes_depois',
+    promptHint: 'Antes: "As horas extras realizadas serão compensadas em banco de horas sem prazo definido para compensação." Depois: corrigir para prazo máximo de 6 meses (acordo individual) ou 1 ano (acordo coletivo), com conversão automática em pagamento se não compensado (CLT art. 59 §2º).',
+  },
+  {
+    key: 'ad-servico-responsabilidade-zero',
+    category: 'servico',
+    type: 'antes_depois',
+    promptHint: 'Antes: "O CONTRATADO não se responsabiliza por quaisquer danos, diretos, indiretos, lucros cessantes ou consequenciais decorrentes da prestação dos serviços." Depois: versão válida que admite responsabilidade por negligência e dolo, com limitação proporcional ao valor do contrato (CC art. 422 + CDC art. 51, I).',
+  },
+  {
+    key: 'ad-consumidor-foro-abusivo',
+    category: 'consumidor',
+    type: 'antes_depois',
+    promptHint: 'Antes: "Fica eleito o foro da Comarca de São Paulo, SP, para dirimir quaisquer controvérsias, renunciando as partes a qualquer outro." Depois: versão que mantém o foro do fornecedor mas ressalva o direito do consumidor de ajuizar no seu domicílio (CDC art. 101, I). Explicar que a cláusula original é NULA em relações de consumo.',
+  },
+  {
+    key: 'ad-digital-renovacao-automatica',
+    category: 'digital',
+    type: 'antes_depois',
+    promptHint: 'Antes: "O contrato se renova automaticamente por igual período, salvo cancelamento com 90 dias de antecedência por escrito via cartório." Depois: versão com notificação simples por email, prazo de cancelamento de 30 dias e direito de arrependimento de 7 dias após cada renovação (CDC art. 49 + Lei 14.181/2021).',
+  },
+  {
+    key: 'ad-condominio-taxa-extra',
+    category: 'condominio',
+    type: 'antes_depois',
+    promptHint: 'Antes: "O síndico fica autorizado a aprovar obras e despesas extraordinárias de até R$ 50.000 sem aprovação em assembleia." Depois: versão com limite razoável para emergências reais (ex: R$ 3.000) e exigência de assembleia para qualquer obra de melhoria (CC art. 1.341 + Lei 4.591/64 art. 22).',
+  },
+  {
+    key: 'ad-geral-multa-abusiva',
+    category: 'geral',
+    type: 'antes_depois',
+    promptHint: 'Antes: "O descumprimento de qualquer obrigação contratual sujeitará a parte inadimplente ao pagamento de multa equivalente a 200% do valor total do contrato." Depois: versão com multa proporcional ao dano real, dentro do limite legal de moderação pelo juiz (CC arts. 412-413). Explicar que multa desproporcional é revisável.',
   },
 
   // === CASO REAL — cláusulas absurdas comentadas ===

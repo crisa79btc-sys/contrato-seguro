@@ -74,6 +74,7 @@ export async function generateSocialPost(
       estatistica: 'Crie um post usando um dado/estatística impactante como gancho.',
       pergunta: 'Crie um post com uma pergunta engajante para o público comentar.',
       caso_real: 'Crie um post no formato "CASO REAL" sobre uma cláusula absurda encontrada num contrato de verdade. Comece com "Olha essa cláusula real:" + citação entre aspas + comentário sarcástico/indignado + por que é nula/abusiva com artigo de lei.',
+      antes_depois: 'Crie um post revelando uma cláusula contratual abusiva e como ela deveria ser escrita. Mostre a versão original (❌) e a corrigida (✅). Use tom de indignação e alívio. Cite o artigo de lei que torna a original nula.',
     };
 
     const userPrompt = `Tipo de post: ${typeInstructions[topic.type]}
@@ -121,6 +122,16 @@ TOM DE VOZ:
 - Gírias moderadas: "pegadinha", "furada", "pilantragem", "cilada" — NUNCA palavrão
 - Tom de cumplicidade: "a gente sabe que ninguém lê, mas..."
 
+GANCHOS ESPECÍFICOS POR CATEGORIA (usar como inspiração, não copiar literalmente):
+- aluguel: foco em dinheiro perdido, depósito retido, multa injusta — "Você PERDEU essa grana sem precisar"
+- trabalho: foco em direito violado que o leitor já viveu — "Seu empregador fez isso? É ILEGAL"
+- consumidor: foco em produto/serviço ruim cotidiano — "Essa empresa contou que você não saberia"
+- digital: foco em dado cedido sem saber — "Você aceitou isso sem perceber"
+- servico: foco em calote ou promessa descumprida — "R$ X jogados fora por causa disso"
+- compra_venda: foco em armadilha oculta — "Comprou sem saber dessa armadilha?"
+- condominio: foco em taxa ou regra abusiva do síndico — "Seu síndico pode fazer isso? NÃO"
+- geral: foco em situação cotidiana — "Quase todo mundo já assinou isso sem saber"
+
 ESTRUTURA DO CARROSSEL (3 a 5 slides — NUNCA mais que 5):
 - Slide 1 (capa): gancho visceral (ver regras abaixo)
 - Slides 2 a N-1: conteúdo prático (cada slide UM ponto)
@@ -131,7 +142,7 @@ REGRAS DA CAPA (coverTitle):
 - MÁXIMO 5 palavras. Idealmente 3-4.
 - Provocativo, contraintuitivo, chocante ou curioso
 - Usar CAIXA ALTA em 1-2 palavras-chave
-- EXEMPLOS BONS: "PERDEU R$ 3 MIL", "CLÁUSULA ILEGAL COMUM", "NÃO ASSINE ISSO", "GOLPE LEGAL EXISTE", "VOCÊ PAGA DE BOBO", "CAIU NESSA?"
+- EXEMPLOS BONS: "PERDEU R$ 3 MIL", "CLÁUSULA ILEGAL COMUM", "NÃO ASSINE ISSO", "GOLPE LEGAL EXISTE", "VOCÊ PAGA DE BOBO", "CAIU NESSA?", "SÍNDICO NÃO PODE", "RESCISÃO GRATUITA?"
 - EXEMPLOS RUINS (não usar): "5 cláusulas abusivas", "Dicas sobre contratos", "O que você precisa saber", "Guia completo sobre..."
 - coverSubtitle: 1 linha curta que completa, não repete. Máx 12 palavras.
 
@@ -145,10 +156,10 @@ REGRAS DE CADA SLIDE DE CONTEÚDO:
 REGRAS DA LEGENDA (caption):
 ESTRUTURA OBRIGATÓRIA (nesta ordem, sem pular etapa):
 
-1. GANCHO (linha 1): pergunta ou afirmação chocante. Exemplos:
-   "Você pagou R$ 3 mil de multa sem precisar? 😱"
-   "⚠️ 9 em cada 10 contratos têm ESSA cláusula ilegal"
-   "Já assinou algo e depois pensou 'que burro fui eu'? 👇"
+1. GANCHO (linha 1): pergunta ou afirmação chocante. Use o estilo específico da categoria acima. Exemplos:
+   "Você perdeu o depósito sem precisar? 😱" (aluguel)
+   "⚠️ Seu empregador faz isso? É ILEGAL" (trabalho)
+   "Já assinou algo e depois pensou 'que burro fui eu'? 👇" (geral)
 
 2. CONTEÚDO (3-5 linhas): pontos principais, numerados com 1️⃣ 2️⃣ etc ou com ✅/❌. Máx 1 frase por ponto.
 
@@ -191,6 +202,52 @@ FORMATO DE RESPOSTA (JSON puro, sem markdown):
 
 Gere entre 3 e 5 slides (NUNCA mais que 5). Retorne APENAS o JSON.`;
 
+const ANTES_DEPOIS_SYSTEM_PROMPT = `Você é um social media manager viral especializado em direito contratual brasileiro. Seu trabalho: criar carrosséis no formato ANTES/DEPOIS que mostram uma cláusula abusiva REAL e como ela DEVERIA ser escrita. Esse formato é altamente viral porque deixa o leitor com raiva (do original) e aliviado (da correção).
+
+TOM DE VOZ:
+- Português jovem, direto. Tom de cumplicidade + indignação comedida.
+- Na capa: choque ("Você assinou ISSO?", "CLÁUSULA NULA comum")
+- No slide ANTES: tom sarcástico discreto ("como se você não fosse contestar...")
+- No slide DEPOIS: tom confiante e encorajador ("assim fica justo pra você")
+
+ESTRUTURA OBRIGATÓRIA (exatamente 3 slides de conteúdo):
+- Slide 1 (ANTES): title="❌ COMO ESTÁ", description=cláusula abusiva literal (entre aspas), law=base legal que a torna inválida
+- Slide 2 (DEPOIS): title="✅ COMO DEVERIA SER", description=versão corrigida da cláusula (entre aspas), law=artigo que fundamenta a correção
+- Slide 3 (CONCLUSÃO): title="Por que é NULA?", description=explicação em 1-2 frases diretas de por que o original é abusivo + como contestar, law=artigo principal
+
+REGRAS DA CAPA:
+- coverTitle: máx 5 palavras, ex: "CLÁUSULA NULA CLÁSSICA", "VOCÊ ASSINOU ISSO?", "NÃO ACEITE MAIS", "ILEGAL e COMUM"
+- coverSubtitle: 1 linha, ex: "Veja a versão que te protege de verdade"
+
+REGRAS DA LEGENDA:
+1. GANCHO: revelação chocante sobre a cláusula — "Essa cláusula aparece em X em 10 contratos e é NULA"
+2. CONTEXTO: 2 linhas explicando o problema
+3. SOLUÇÃO: 1 linha do que a lei garante
+4. PERGUNTA DE ENGAJAMENTO: "Você já assinou algo parecido? 👇"
+5. CTAS: "💾 Salva pra mostrar antes de assinar" + "👥 Marca alguém que assinou isso"
+6. LINK: "🛡️ Analise seu contrato em 30 segundos GRÁTIS: PLACEHOLDER_UTM_URL"
+7. DISCLAIMER: "⚖️ Conteúdo informativo. Não substitui orientação jurídica profissional."
+
+REGRAS INVIOLÁVEIS:
+- As cláusulas nos slides DEVEM ser textos jurídicos reais (estilo contrato), entre aspas
+- NÃO inventar artigos de lei
+- Exatamente 3 slides (ANTES + DEPOIS + CONCLUSÃO)
+
+FORMATO DE RESPOSTA (JSON puro):
+{
+  "caption": "legenda completa",
+  "coverTitle": "Máx 5 palavras",
+  "coverSubtitle": "Subtítulo curto",
+  "imageHeadline": "Headline 5-7 palavras",
+  "slides": [
+    { "title": "❌ COMO ESTÁ", "description": "\"...cláusula abusiva literal...\"", "law": "CDC art. XX — torna nula" },
+    { "title": "✅ COMO DEVERIA SER", "description": "\"...versão corrigida...\"", "law": "CC art. XX" },
+    { "title": "Por que é NULA?", "description": "Explicação em 1-2 frases.", "law": "Artigo principal" }
+  ]
+}
+
+Retorne APENAS o JSON.`;
+
 /**
  * Gera um post em formato carrossel para Instagram/Facebook.
  */
@@ -200,9 +257,14 @@ export async function generateCarouselPost(
 ): Promise<CarouselPost> {
   try {
     const ctaUrl = buildUtmUrl({ source: platform, medium: 'carousel', campaign: topic.key || 'generic' });
-    const systemPrompt = CAROUSEL_SYSTEM_PROMPT.replace('PLACEHOLDER_UTM_URL', ctaUrl);
 
-    const userPrompt = `Tema: ${topic.promptHint}
+    const isAntesDePois = topic.type === 'antes_depois';
+    const basePrompt = isAntesDePois ? ANTES_DEPOIS_SYSTEM_PROMPT : CAROUSEL_SYSTEM_PROMPT;
+    const systemPrompt = basePrompt.replace('PLACEHOLDER_UTM_URL', ctaUrl);
+
+    const userPrompt = isAntesDePois
+      ? `Cláusula para o formato ANTES/DEPOIS:\n${topic.promptHint}\nCategoria: ${topic.category}\n\nGere o carrossel ANTES/DEPOIS agora.`
+      : `Tema: ${topic.promptHint}
 Categoria: ${topic.category}
 Tipo: ${topic.type}
 
