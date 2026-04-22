@@ -17,10 +17,11 @@
  */
 
 import { ImageResponse } from 'next/og';
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import fs from 'fs';
+import path from 'path';
 
 export const dynamic = 'force-dynamic';
-export const runtime = 'edge';
 
 // ─── Design tokens ─────────────────────────────────────────────────────────────
 const BG        = '#0b0613';
@@ -1178,13 +1179,21 @@ export async function GET(
 ) {
   void params;
 
-  const base = request.nextUrl.origin;
-  const [fontRegular, fontBold, fontExtraBold, fontSemiBold] = await Promise.all([
-    fetch(`${base}/fonts/Poppins-Regular.ttf`).then(r => r.arrayBuffer()),
-    fetch(`${base}/fonts/Poppins-Bold.ttf`).then(r => r.arrayBuffer()),
-    fetch(`${base}/fonts/Poppins-ExtraBold.ttf`).then(r => r.arrayBuffer()),
-    fetch(`${base}/fonts/Poppins-SemiBold.ttf`).then(r => r.arrayBuffer()),
-  ]);
+  let fontRegular: ArrayBuffer;
+  let fontBold: ArrayBuffer;
+  let fontExtraBold: ArrayBuffer;
+  let fontSemiBold: ArrayBuffer;
+
+  try {
+    const fontsDir = path.join(process.cwd(), 'public', 'fonts');
+    fontRegular   = fs.readFileSync(path.join(fontsDir, 'Poppins-Regular.ttf')) as unknown as ArrayBuffer;
+    fontBold      = fs.readFileSync(path.join(fontsDir, 'Poppins-Bold.ttf')) as unknown as ArrayBuffer;
+    fontExtraBold = fs.readFileSync(path.join(fontsDir, 'Poppins-ExtraBold.ttf')) as unknown as ArrayBuffer;
+    fontSemiBold  = fs.readFileSync(path.join(fontsDir, 'Poppins-SemiBold.ttf')) as unknown as ArrayBuffer;
+  } catch (err) {
+    console.error('[Social Image] Falha ao carregar fontes:', err);
+    return NextResponse.json({ error: 'Falha ao carregar fontes' }, { status: 500 });
+  }
 
   const fonts = [
     { name: 'Poppins', data: fontRegular,   weight: 400 as const, style: 'normal' as const },
