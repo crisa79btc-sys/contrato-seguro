@@ -28,6 +28,7 @@ import {
   resetPostedTopics,
   recordLastCoverUrl,
 } from './state';
+import { alertSocialFailure } from './alert';
 import type { OrchestratorResult, MetaPostResult, SocialPostResult, CarouselPost } from './types';
 
 const APP_URL = (process.env.NEXT_PUBLIC_APP_URL || 'https://contrato-seguro-inky.vercel.app').trim();
@@ -40,9 +41,12 @@ function buildSlideImageUrl(params: Record<string, string>): string {
   return `${APP_URL}/api/social/image/carousel?${qs}`;
 }
 
+const MIN_SLIDE_BYTES = 5 * 1024; // 5KB — PNG válido tem >50KB; <5KB é certeza de falha silenciosa
+
 /**
  * Busca uma imagem de slide e faz upload para Supabase.
  * Retorna a URL pública limpa para a Meta API.
+ * Rejeita PNGs menores que 5KB (provavelmente vazios/corrompidos).
  */
 async function fetchAndUploadSlide(slideUrl: string, filename: string): Promise<string | null> {
   try {
@@ -52,6 +56,10 @@ async function fetchAndUploadSlide(slideUrl: string, filename: string): Promise<
       return null;
     }
     const buffer = Buffer.from(await res.arrayBuffer());
+    if (buffer.byteLength < MIN_SLIDE_BYTES) {
+      console.error(`[Social] Slide ${filename} muito pequeno (${buffer.byteLength} bytes) — rejeitado para não publicar imagem vazia.`);
+      return null;
+    }
     return uploadSocialImage({ data: buffer, mimeType: 'image/png', filename });
   } catch (err) {
     console.warn(`[Social] Erro ao processar slide ${filename}:`, err);
@@ -307,6 +315,25 @@ export async function runSocialPost(options?: {
     });
   } else {
     console.error('[Social] Nenhum canal publicou com sucesso — estado NÃO registrado para permitir retry.');
+  }
+
+  // 10. Alertar no Telegram sobre canais que falharam (mesmo se outros publicaram).
+  // Não bloqueia nem lança — sendAlert é best-effort.
+  const failures: Array<{ channel: string; error: string }> = [];
+  if (fbResult && !fbResult.success) failures.push({ channel: 'Facebook', error: fbResult.error || 'erro desconhecido' });
+  if (igResult && !igResult.success) failures.push({ channel: 'Instagram', error: igResult.error || 'erro desconhecido' });
+  if (threadsResult && !threadsResult.success) failures.push({ channel: 'Threads', error: threadsResult.error || 'erro desconhecido' });
+  if (linkedInResult && !linkedInResult.success) failures.push({ channel: 'LinkedIn', error: linkedInResult.error || 'erro desconhecido' });
+  if (tikTokResult && !tikTokResult.success) failures.push({ channel: 'TikTok', error: tikTokResult.error || 'erro desconhecido' });
+  if (newsletterResult && !newsletterResult.success) failures.push({ channel: 'Newsletter', error: newsletterResult.error || 'erro desconhecido' });
+  if (!hasCarousel) failures.push({ channel: 'Geração de imagens', error: `apenas ${carouselImageUrls.length} slides válidos (mín 2)` });
+
+  if (failures.length > 0) {
+    await alertSocialFailure({
+      topicKey: topic.key,
+      failures,
+      context: anySuccess ? 'parcial — algum canal publicou' : 'total — NENHUM canal publicou',
+    });
   }
 
   return {

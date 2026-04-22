@@ -2,11 +2,15 @@
   "crons": [
     {
       "path": "/api/cron/social",
-      "schedule": "0 22 * * 0,1,3,5"
+      "schedule": "0 22 * * *"
     },
     {
       "path": "/api/cron/social-story",
       "schedule": "0 14 * * 2,4,6"
+    },
+    {
+      "path": "/api/cron/social-heartbeat",
+      "schedule": "0 15 * * 1"
     },
     {
       "path": "/api/cron/cleanup",

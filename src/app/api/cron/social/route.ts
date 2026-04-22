@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { runSocialPost } from '@/lib/social/post-orchestrator';
+import { sendAlert } from '@/lib/social/alert';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 90;
@@ -24,15 +25,12 @@ export async function GET(request: NextRequest) {
   const dryRun = request.nextUrl.searchParams.get('dryRun') === 'true';
   const force = request.nextUrl.searchParams.get('force') === 'true';
 
-  // Estratégia 4 posts/semana: dom/seg/qua/sex às 22h UTC (19h BRT)
-  // Domingo: caso_real consumidor. Seg: trabalho. Qua: consumidor. Sex: condomínio antes/depois.
+  // Estratégia 7 posts/semana: todos os dias às 22h UTC (19h BRT).
+  // Calendário editorial em src/lib/social/topics.ts DAY_OF_WEEK_CALENDAR.
   if (!force && !dryRun) {
-    const now = new Date();
-    const hourUtc = now.getUTCHours();
-    const dayOfWeek = now.getUTCDay(); // 0=domingo, 6=sábado
-    const shouldPost = hourUtc === 22 && [0, 1, 3, 5].includes(dayOfWeek);
-    if (!shouldPost) {
-      return NextResponse.json({ skipped: true, reason: 'horário não é slot de posting (dom/seg/qua/sex 19h BRT)' });
+    const hourUtc = new Date().getUTCHours();
+    if (hourUtc !== 22) {
+      return NextResponse.json({ skipped: true, reason: 'horário não é 22h UTC (19h BRT)' });
     }
   }
 
@@ -44,6 +42,7 @@ export async function GET(request: NextRequest) {
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Erro desconhecido';
     console.error('[Social Cron] Erro fatal:', err);
+    await sendAlert(`🚨 <b>Social Cron — erro fatal</b>\n<code>${msg.slice(0, 500)}</code>`);
     return NextResponse.json({ status: 'error', error: msg }, { status: 500 });
   }
 }

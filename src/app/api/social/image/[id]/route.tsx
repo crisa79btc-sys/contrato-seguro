@@ -1243,5 +1243,28 @@ export async function GET(
     jsx = <LegacySlide headline={headline} category={category} />;
   }
 
-  return new ImageResponse(jsx, { width: 1080, height: 1080, fonts });
+  try {
+    const response = new ImageResponse(jsx, { width: 1080, height: 1080, fonts });
+    // Validação fail-fast: se imagem < 5KB, provavelmente está vazia/corrompida.
+    // Instead of streaming, bufferizar e validar.
+    const buf = Buffer.from(await response.arrayBuffer());
+    if (buf.byteLength < 5 * 1024) {
+      console.error(`[Social Image] PNG gerado muito pequeno (${buf.byteLength} bytes) — provavelmente falhou silenciosamente. type=${type} category=${category}`);
+      return NextResponse.json(
+        { error: `PNG gerado muito pequeno (${buf.byteLength} bytes)` },
+        { status: 500 },
+      );
+    }
+    return new NextResponse(buf, {
+      status: 200,
+      headers: {
+        'Content-Type': 'image/png',
+        'Cache-Control': 'public, immutable, no-transform, max-age=31536000',
+      },
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Erro desconhecido';
+    console.error('[Social Image] Erro na geração:', err);
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
 }

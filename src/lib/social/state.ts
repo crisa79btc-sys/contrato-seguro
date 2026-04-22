@@ -68,6 +68,13 @@ export async function hasPostedToday(): Promise<boolean> {
 }
 
 /**
+ * Retorna a data (YYYY-MM-DD) do último post social publicado, ou null.
+ */
+export async function getLastPostDate(): Promise<string | null> {
+  return getState<string>(KEYS.lastPostDate);
+}
+
+/**
  * Retorna os temas já postados no ciclo atual.
  */
 export async function getPostedTopics(): Promise<string[]> {
