@@ -313,10 +313,11 @@ function ItemSlide({
       }}>
         <LogoFull size="sm" />
         <div style={{
+          display: 'flex',
           fontFamily: 'Poppins', fontWeight: 700, fontSize: 15,
           color: TEXT_DIM, letterSpacing: '2px', textTransform: 'uppercase',
         }}>
-          {String(parseInt(number)).padStart(2, '0')} / {String(total - 2).padStart(2, '0')}
+          {`${String(parseInt(number)).padStart(2, '0')} / ${String(total - 2).padStart(2, '0')}`}
         </div>
       </div>
 
@@ -441,12 +442,13 @@ function CtaSlide({ category, accent }: { category: string; accent: string }) {
         <LogoFull size="lg" />
 
         <div style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center',
           fontFamily: 'Poppins', fontWeight: 800,
           fontSize: 52, color: TEXT,
           textAlign: 'center', lineHeight: 1.1,
           letterSpacing: '-1.5px',
         }}>
-          Analise seu contrato<br />
+          <span>Analise seu contrato</span>
           <span style={{ color: VIO_BRT }}>gratuitamente com IA</span>
         </div>
 
@@ -459,13 +461,14 @@ function CtaSlide({ category, accent }: { category: string; accent: string }) {
 
         {/* CTA button */}
         <div style={{
+          display: 'flex',
           background: 'linear-gradient(180deg, #b39dff, #8b5cf6)',
           borderRadius: 14, padding: '18px 48px',
           fontFamily: 'Poppins', fontWeight: 700, fontSize: 24,
           color: '#fff', letterSpacing: '-0.3px',
           boxShadow: '0 12px 40px rgba(139,92,246,0.4)',
         }}>
-          {APP_DISPLAY} →
+          {`${APP_DISPLAY} →`}
         </div>
 
         {/* Trust chips */}
