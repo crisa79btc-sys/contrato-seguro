@@ -948,6 +948,7 @@ function BeforeSlide({
 
         {/* Clause card */}
         <div style={{
+          display: 'flex',
           background: 'rgba(220,38,38,0.08)',
           border: '1px solid rgba(239,68,68,0.3)',
           borderLeft: '4px solid #dc2626',
@@ -1060,6 +1061,7 @@ function AfterSlide({
 
         {/* Corrected clause card */}
         <div style={{
+          display: 'flex',
           background: 'rgba(16,185,129,0.07)',
           border: '1px solid rgba(52,211,153,0.3)',
           borderLeft: '4px solid #10b981',
