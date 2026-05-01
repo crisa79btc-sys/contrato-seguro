@@ -16,7 +16,15 @@ const KEYS = {
   lastCategory: 'social_last_category',
   lastType: 'social_last_type',
   lastCoverUrl: 'social_last_cover_url',
+  lastCoverMeta: 'social_last_cover_meta',
 } as const;
+
+export type CoverMeta = {
+  title: string;
+  subtitle: string;
+  category: string;
+  badge: string;
+};
 
 /**
  * Lê um valor do app_config.
@@ -143,4 +151,20 @@ export async function recordLastCoverUrl(url: string): Promise<void> {
  */
 export async function getLastCoverUrl(): Promise<string | null> {
   return getState<string>(KEYS.lastCoverUrl);
+}
+
+/**
+ * Salva os parâmetros usados para gerar a capa do último carrossel.
+ * O cron de Stories usa esses parâmetros para gerar uma versão 1080×1920
+ * vertical nativa (em vez de reaproveitar a quadrada, que ficava cortada).
+ */
+export async function recordLastCoverMeta(meta: CoverMeta): Promise<void> {
+  await setState(KEYS.lastCoverMeta, meta, 'Parâmetros da capa do último carrossel (para gerar Story vertical)');
+}
+
+/**
+ * Retorna os parâmetros da capa do último carrossel, ou null.
+ */
+export async function getLastCoverMeta(): Promise<CoverMeta | null> {
+  return getState<CoverMeta>(KEYS.lastCoverMeta);
 }

@@ -27,6 +27,7 @@ import {
   recordPost,
   resetPostedTopics,
   recordLastCoverUrl,
+  recordLastCoverMeta,
 } from './state';
 import { alertSocialFailure } from './alert';
 import type { OrchestratorResult, MetaPostResult, SocialPostResult, CarouselPost } from './types';
@@ -281,9 +282,17 @@ export async function runSocialPost(options?: {
   if (tikTokResult) console.log('[Social] TikTok:', tikTokResult.success ? `OK (${tikTokResult.id})` : `ERRO: ${tikTokResult.error}`);
   if (newsletterResult) console.log('[Social] Newsletter:', newsletterResult.success ? `OK (${newsletterResult.id})` : `ERRO: ${newsletterResult.error}`);
 
-  // Salvar URL da capa para o cron de Stories (reaproveita 24h depois)
+  // Salvar URL e metadados da capa para o cron de Stories.
+  // O Story usa os metadados para gerar imagem 1080×1920 vertical nativa
+  // (a URL quadrada do feed continua salva, mas não é mais usada no Story).
   if (carouselImageUrls[0]) {
     await recordLastCoverUrl(carouselImageUrls[0]);
+    await recordLastCoverMeta({
+      title: carousel.coverTitle,
+      subtitle: carousel.coverSubtitle,
+      category: topic.category,
+      badge: topic.type,
+    });
   }
 
   // Primeiro comentário automático no IG — sinal algorítmico + link clicável

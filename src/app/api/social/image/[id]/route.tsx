@@ -1109,6 +1109,147 @@ function AfterSlide({
   );
 }
 
+// ─── TEMPLATE: STORY (1080×1920, vertical 9:16) ───────────────────────────────
+// Reaproveita os parâmetros da capa do carrossel mas adapta o layout para
+// formato vertical, com safe zones para os elementos UI do Instagram (avatar
+// no topo, "Enviar mensagem" no rodapé). Texto bem maior — Story tem mais
+// altura disponível e é visto sem zoom.
+function StorySlide({
+  title, subtitle, badge, category, accent,
+}: {
+  title: string; subtitle: string; badge: string;
+  category: string; accent: string;
+}) {
+  const badgeLabel = BADGE_LABEL[badge] ?? 'DICA JURÍDICA';
+  const isCasoReal = badge === 'caso_real';
+  const isMitoVerdade = badge === 'mito_verdade';
+  const headerAccent = isCasoReal ? DANGER : accent;
+
+  // Tamanhos do título adaptados ao espaço vertical (mais generoso que o feed)
+  const titleSize = title.length > 40 ? 88 : title.length > 24 ? 110 : 130;
+
+  return (
+    <div style={{
+      width: '100%', height: '100%',
+      background: BG,
+      display: 'flex', flexDirection: 'column',
+      position: 'relative', overflow: 'hidden',
+    }}>
+      {/* Glow superior */}
+      <div style={{
+        position: 'absolute', top: -300, left: '50%',
+        width: 1200, height: 1200, borderRadius: '50%',
+        background: `radial-gradient(circle, ${headerAccent}1f 0%, transparent 65%)`,
+        transform: 'translateX(-50%)',
+        pointerEvents: 'none',
+      }} />
+      {/* Glow inferior (CTA) */}
+      <div style={{
+        position: 'absolute', bottom: -200, left: '50%',
+        width: 900, height: 900, borderRadius: '50%',
+        background: `radial-gradient(circle, ${VIOLET}18 0%, transparent 65%)`,
+        transform: 'translateX(-50%)',
+        pointerEvents: 'none',
+      }} />
+
+      {/* Top accent strip */}
+      <div style={{
+        position: 'absolute', top: 0, left: 0, right: 0, height: 6,
+        background: `linear-gradient(90deg, ${headerAccent}, ${VIOLET})`,
+      }} />
+
+      {/* Big decorative § watermark */}
+      <div style={{
+        position: 'absolute', right: -40, top: 720,
+        fontFamily: 'Poppins', fontWeight: 800,
+        fontSize: 520, color: `${headerAccent}0a`,
+        lineHeight: 1, letterSpacing: '-12px',
+        userSelect: 'none',
+        display: 'flex',
+      }}>
+        §
+      </div>
+
+      {/* HEADER — safe zone topo do IG (~180px) + 80px de respiro */}
+      <div style={{
+        display: 'flex', flexDirection: 'column', gap: 28,
+        padding: '260px 80px 0', position: 'relative', zIndex: 1,
+      }}>
+        <LogoFull size="lg" />
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10,
+          background: `${headerAccent}1a`,
+          border: `1px solid ${headerAccent}44`,
+          borderRadius: 100, padding: '12px 24px',
+          alignSelf: 'flex-start',
+        }}>
+          {isCasoReal && <span style={{ fontSize: 20 }}>🚨</span>}
+          {isMitoVerdade && <span style={{ fontSize: 20 }}>🔍</span>}
+          <span style={{
+            fontFamily: 'Poppins', fontWeight: 700, fontSize: 20,
+            color: headerAccent, letterSpacing: '1.5px', textTransform: 'uppercase',
+          }}>
+            {badgeLabel}
+          </span>
+        </div>
+      </div>
+
+      {/* CONTENT — área principal vertical (centralizada) */}
+      <div style={{
+        flex: 1, display: 'flex', flexDirection: 'column',
+        justifyContent: 'center', padding: '0 80px', gap: 36,
+        position: 'relative', zIndex: 1,
+      }}>
+        <RuleLine accent={headerAccent} />
+
+        <div style={{
+          fontFamily: 'Poppins', fontWeight: 800,
+          fontSize: titleSize, color: TEXT, lineHeight: 1.0,
+          letterSpacing: titleSize > 100 ? '-3px' : '-2px',
+          maxWidth: 920,
+          display: 'flex',
+        }}>
+          {title}
+        </div>
+
+        <div style={{
+          fontFamily: 'Poppins', fontWeight: 400, fontSize: 36,
+          color: TEXT_MUT, lineHeight: 1.4, maxWidth: 880,
+          display: 'flex',
+        }}>
+          {subtitle}
+        </div>
+      </div>
+
+      {/* CTA — fica acima do safe zone bottom do IG */}
+      <div style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20,
+        padding: '0 80px 280px', position: 'relative', zIndex: 1,
+      }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 14,
+          background: 'linear-gradient(180deg, #b39dff, #8b5cf6)',
+          borderRadius: 16, padding: '22px 56px',
+          boxShadow: '0 16px 48px rgba(139,92,246,0.4)',
+        }}>
+          <span style={{
+            fontFamily: 'Poppins', fontWeight: 700, fontSize: 30,
+            color: '#fff', letterSpacing: '-0.3px',
+          }}>
+            Análise gratuita →
+          </span>
+        </div>
+        <span style={{
+          fontFamily: 'Poppins', fontWeight: 500, fontSize: 22,
+          color: TEXT_DIM, letterSpacing: '0.3px',
+        }}>
+          {APP_DISPLAY}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 // ─── TEMPLATE: LEGADO (post único) ────────────────────────────────────────────
 function LegacySlide({ headline, category }: { headline: string; category: string }) {
   const accent = CAT_ACCENT[category] ?? CAT_ACCENT.geral!;
@@ -1200,6 +1341,7 @@ export async function GET(
   ];
 
   const p           = request.nextUrl.searchParams;
+  const format      = p.get('format') || '';
   const type        = p.get('type') || '';
   const category    = p.get('category') || 'geral';
   const badge       = p.get('badge') || 'dica';
@@ -1213,10 +1355,13 @@ export async function GET(
   const headline    = p.get('headline') || 'Proteja seus direitos';
 
   const accent = CAT_ACCENT[category] ?? CAT_ACCENT.geral!;
+  const isStory = format === 'story';
 
   let jsx: React.ReactElement;
 
-  if (type === 'cover') {
+  if (isStory) {
+    jsx = <StorySlide title={title} subtitle={subtitle} badge={badge} category={category} accent={accent} />;
+  } else if (type === 'cover') {
     if (badge === 'caso_real') {
       jsx = <CasoRealSlide title={title} subtitle={subtitle} current={current} total={total} category={category} accent={accent} />;
     } else if (badge === 'mito_verdade') {
@@ -1241,12 +1386,15 @@ export async function GET(
   }
 
   try {
-    const response = new ImageResponse(jsx, { width: 1080, height: 1080, fonts });
+    const dimensions = isStory
+      ? { width: 1080, height: 1920 }
+      : { width: 1080, height: 1080 };
+    const response = new ImageResponse(jsx, { ...dimensions, fonts });
     // Validação fail-fast: se imagem < 5KB, provavelmente está vazia/corrompida.
     // Instead of streaming, bufferizar e validar.
     const buf = Buffer.from(await response.arrayBuffer());
     if (buf.byteLength < 5 * 1024) {
-      console.error(`[Social Image] PNG gerado muito pequeno (${buf.byteLength} bytes) — provavelmente falhou silenciosamente. type=${type} category=${category}`);
+      console.error(`[Social Image] PNG gerado muito pequeno (${buf.byteLength} bytes) — provavelmente falhou silenciosamente. type=${type} category=${category} format=${format}`);
       return NextResponse.json(
         { error: `PNG gerado muito pequeno (${buf.byteLength} bytes)` },
         { status: 500 },
